@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:5000/api';
+/** Dev: `/api` is proxied by Vite (vite.config.js). Production: set VITE_API_URL on Render (e.g. https://your-api.onrender.com/api). */
+const API_URL = import.meta.env.DEV
+  ? '/api'
+  : String(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
 // Auth API
 export const authAPI = {
