@@ -1,0 +1,11 @@
+# Secrets — never commit API keys or DB passwords
+server/.env
+.env
+.env.local
+*.local
+
+# Dependencies & build output
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
