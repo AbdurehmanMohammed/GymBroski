@@ -8,12 +8,30 @@
  * .env:
  *   ABSTRACT_EMAIL_API_KEY=your_key
  *   ABSTRACT_EMAIL_PRODUCT=reputation   (default) | validation
+ *   ABSTRACT_EMAIL_SKIP_MX_DNS=true       (optional, dev only — skips DNS MX check after Abstract)
  */
+
+import dns from 'node:dns/promises';
 
 const URL_BY_PRODUCT = {
   reputation: 'https://emailreputation.abstractapi.com/v1/',
   validation: 'https://emailvalidation.abstractapi.com/v1/',
 };
+
+/** Domains that accept mail (MX) but are frequent typos of gmail.com / outlook.com / yahoo.com. */
+const COMMON_PROVIDER_TYPO_DOMAINS = new Set([
+  'gmi.com',
+  'gmial.com',
+  'gmai.com',
+  'gnail.com',
+  'gmaill.com',
+  'yahooo.com',
+  'yaho.com',
+  'hotmial.com',
+  'hotmai.com',
+  'outlok.com',
+  'outlookk.com',
+]);
 
 /** Normalize Abstract's boolean fields (sometimes boolean, sometimes { value: boolean }) */
 function isTruthyField(field) {
@@ -83,7 +101,11 @@ function evaluateValidationShape(data) {
         message: 'We could not verify this email. Please check for typos or try another address.',
       };
     }
-    return { ok: true };
+    return {
+      ok: false,
+      message:
+        'We could not verify this email inbox. Check for typos (e.g. gmail.com) or try another address.',
+    };
   }
 
   if (mxOk) return { ok: true };
@@ -129,8 +151,22 @@ function evaluateReputationResponse(data) {
     return { ok: false, message: 'Invalid email address.' };
   }
 
-  // 200 + no hard failure above → accept (Reputation often omits MX / format fields Validation sends)
+  // 200 + no hard failure above → accept pending DNS MX check below
   return { ok: true };
+}
+
+/** Confirms the domain accepts mail (catches many typo domains with no real MX). */
+async function domainHasMxRecords(hostname) {
+  const h = String(hostname || '')
+    .toLowerCase()
+    .trim();
+  if (!h || h.length > 253) return false;
+  try {
+    const records = await dns.resolveMx(h);
+    return Array.isArray(records) && records.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -232,8 +268,34 @@ export async function verifyEmailWithAbstract(email) {
     return { ok: false, message: 'Email verification failed. Please check your address.' };
   }
 
-  if (product === 'reputation') {
-    return evaluateReputationResponse(data);
+  const abstractResult =
+    product === 'reputation' ? evaluateReputationResponse(data) : evaluateValidationShape(data);
+  if (!abstractResult.ok) return abstractResult;
+
+  if (process.env.ABSTRACT_EMAIL_SKIP_MX_DNS === 'true') {
+    return abstractResult;
   }
-  return evaluateValidationShape(data);
+
+  const at = email.lastIndexOf('@');
+  if (at <= 0 || at >= email.length - 1) {
+    return { ok: false, message: 'Invalid email address.' };
+  }
+  const domain = email.slice(at + 1);
+  if (COMMON_PROVIDER_TYPO_DOMAINS.has(domain)) {
+    return {
+      ok: false,
+      message:
+        'This domain looks like a typo (e.g. gmail.com). Please double-check your email address.',
+    };
+  }
+  const hasMx = await domainHasMxRecords(domain);
+  if (!hasMx) {
+    return {
+      ok: false,
+      message:
+        'We could not confirm mail delivery for this domain. Check for typos (e.g. gmail.com) or use another address.',
+    };
+  }
+
+  return abstractResult;
 }

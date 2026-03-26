@@ -452,31 +452,39 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
           className={`chat-tab ${tab === 'public' ? 'active' : ''}`}
           onClick={() => { setTab('public'); setSelectedConversation(null); }}
         >
-          Public
+          <span className="chat-tab-inner">
+            <span className="chat-tab-label">Public</span>
+          </span>
         </button>
         <button
           type="button"
           className={`chat-tab ${tab === 'private' ? 'active' : ''}`}
           onClick={() => { setTab('private'); setSelectedConversation(null); }}
         >
-          Private
-          {privateConvs.some((c) => (c.unreadCount || 0) > 0) && (
-            <span className="chat-tab-badge">
-              {privateConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
-            </span>
-          )}
+          <span className="chat-tab-inner">
+            <span className="chat-tab-label">Private</span>
+            {privateConvs.some((c) => (c.unreadCount || 0) > 0) && (
+              <span className="chat-tab-badge" aria-hidden>
+                {privateConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+              </span>
+            )}
+          </span>
         </button>
         <button
           type="button"
           className={`chat-tab ${tab === 'group' ? 'active' : ''}`}
           onClick={() => { setTab('group'); setSelectedConversation(null); }}
         >
-          <FiUsers size={14} /> Group
-          {groupConvs.some((c) => (c.unreadCount || 0) > 0) && (
-            <span className="chat-tab-badge">
-              {groupConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+          <span className="chat-tab-inner">
+            <span className="chat-tab-label">
+              <FiUsers size={14} aria-hidden /> Group
             </span>
-          )}
+            {groupConvs.some((c) => (c.unreadCount || 0) > 0) && (
+              <span className="chat-tab-badge" aria-hidden>
+                {groupConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+              </span>
+            )}
+          </span>
         </button>
       </div>
 
@@ -868,7 +876,7 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
                 );
               })
             )}
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="chat-messages-end-spacer" aria-hidden />
           </div>
 
           {contextMenu && (

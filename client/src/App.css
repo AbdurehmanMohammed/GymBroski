@@ -2490,14 +2490,22 @@ header h1 {
 
 .chat-tabs {
   display: flex;
+  flex-wrap: nowrap;
   gap: 0;
-  padding: 0 16px;
+  padding: 0 8px;
   background: var(--bg-card-soft);
   border-bottom: 1px solid var(--border-soft);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .chat-tab {
-  padding: 12px 20px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px;
   border: none;
   background: none;
   font-size: 14px;
@@ -2508,19 +2516,30 @@ header h1 {
   margin-bottom: -1px;
 }
 
+.chat-tab-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
+.chat-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .chat-tab.active {
   color: #6366f1;
   border-bottom-color: #6366f1;
 }
 
-.chat-tab {
-  position: relative;
-}
-
 .chat-tab-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+  position: static;
+  flex-shrink: 0;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -2528,8 +2547,9 @@ header h1 {
   color: white;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1;
   border-radius: 9px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
@@ -2559,17 +2579,27 @@ header h1 {
 }
 
 .chat-messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  overflow-x: hidden;
+  padding: 12px 14px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  scroll-padding-bottom: 88px;
+}
+
+.chat-messages-end-spacer {
+  flex-shrink: 0;
+  min-height: 16px;
+  width: 100%;
 }
 
 .chat-msg {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-start;
   max-width: 85%;
 }
@@ -2723,7 +2753,7 @@ header h1 {
 
 .chat-msg-bubble {
   position: relative;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 14px;
   max-width: 100%;
 }
@@ -2803,12 +2833,20 @@ header h1 {
   color: var(--text-main);
 }
 
+html:not(.dark-theme) .chat-msg.other .chat-msg-bubble {
+  border-color: #cbd5e1;
+}
+
 .chat-msg-sender {
   display: block;
   font-size: 12px;
   font-weight: 600;
   color: #6366f1;
   margin-bottom: 4px;
+}
+
+.dark-theme .chat-msg.other .chat-msg-sender {
+  color: #a5b4fc;
 }
 
 .chat-msg-content {
@@ -2827,7 +2865,7 @@ header h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 16px 0 12px;
+  margin: 10px 0 8px;
 }
 
 .chat-date-separator span {
@@ -2840,9 +2878,11 @@ header h1 {
 }
 
 .chat-input-form {
+  flex-shrink: 0;
   display: flex;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 12px 14px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--border-soft);
   background: var(--bg-card-soft);
 }
@@ -7805,6 +7845,48 @@ header h1 {
     left: 14px;
   }
 
+  .community-sub-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    margin-top: 10px;
+    margin-left: -2px;
+    margin-right: -2px;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+  }
+
+  .community-sub-tab {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .sidebar .nav-btn {
+    font-size: 16px;
+    padding: 16px 18px;
+    min-height: 48px;
+    margin: 6px 0;
+  }
+
+  .sidebar .logout-btn {
+    font-size: 16px;
+    padding: 16px 18px;
+    min-height: 48px;
+    margin-top: 12px;
+  }
+
+  .sidebar .nav-btn svg,
+  .sidebar .logout-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .chat-msg {
+    max-width: 92%;
+  }
+
   .workouts-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -7841,13 +7923,14 @@ header h1 {
   }
 
   .community-chat-wrapper {
-    min-height: 420px;
-    max-height: calc(100vh - 180px);
+    min-height: min(380px, 45dvh);
+    max-height: min(560px, calc(100dvh - 190px));
     flex: 1;
   }
 
   .community-chat {
-    min-height: 380px;
+    min-height: 0;
+    flex: 1;
   }
 
   .workout-history-card {
