@@ -53,8 +53,58 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
   const longPressTimerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const scrollRef = useRef(null);
+  const composerStackRef = useRef(null);
   /** Prevents overlapping polls when the server is slower than POLL_INTERVAL */
   const pollInFlightRef = useRef(false);
+
+  /** iOS/Android: pin composer above keyboard; --chat-kb-inset = gap below visual viewport */
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const root = document.documentElement;
+    if (!vv) return undefined;
+
+    const syncViewport = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty('--chat-kb-inset', `${inset}px`);
+      root.style.setProperty('--chat-vvh', `${vv.height}px`);
+    };
+
+    syncViewport();
+    vv.addEventListener('resize', syncViewport);
+    vv.addEventListener('scroll', syncViewport);
+    return () => {
+      vv.removeEventListener('resize', syncViewport);
+      vv.removeEventListener('scroll', syncViewport);
+      root.style.removeProperty('--chat-kb-inset');
+      root.style.removeProperty('--chat-vvh');
+    };
+  }, []);
+
+  /** Reserve in-flow height so messages aren’t hidden behind fixed composer (mobile) */
+  useEffect(() => {
+    const el = composerStackRef.current;
+    const root = document.documentElement;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+
+    const apply = () => {
+      if (!window.matchMedia('(max-width: 768px)').matches) {
+        root.style.removeProperty('--chat-composer-spacer');
+        return;
+      }
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      root.style.setProperty('--chat-composer-spacer', `${Math.max(72, h)}px`);
+    };
+
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    apply();
+    window.addEventListener('resize', apply);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', apply);
+      root.style.removeProperty('--chat-composer-spacer');
+    };
+  }, [replyingTo, tab, selectedConversation]);
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -909,42 +959,48 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
             </div>
           )}
 
-          {replyingTo && (
-            <div className="chat-reply-preview">
-              <FiCornerDownRight size={14} />
-              <span className="chat-reply-preview-author">
-                {replyingTo.msg?.senderId?.name || 'Unknown'}
-              </span>
-              <span className="chat-reply-preview-content">
-                {replyingTo.msg?.content?.slice(0, 60)}
-                {replyingTo.msg?.content?.length > 60 ? '…' : ''}
-              </span>
-              <button
-                type="button"
-                className="chat-reply-preview-cancel"
-                onClick={() => setReplyingTo(null)}
-                aria-label="Cancel reply"
-              >
-                <FiX size={14} />
+          <div className="chat-composer-spacer" aria-hidden />
+          <div ref={composerStackRef} className="chat-input-stack chat-input-stack--mobile-fixed">
+            {replyingTo && (
+              <div className="chat-reply-preview">
+                <FiCornerDownRight size={14} />
+                <span className="chat-reply-preview-author">
+                  {replyingTo.msg?.senderId?.name || 'Unknown'}
+                </span>
+                <span className="chat-reply-preview-content">
+                  {replyingTo.msg?.content?.slice(0, 60)}
+                  {replyingTo.msg?.content?.length > 60 ? '…' : ''}
+                </span>
+                <button
+                  type="button"
+                  className="chat-reply-preview-cancel"
+                  onClick={() => setReplyingTo(null)}
+                  aria-label="Cancel reply"
+                >
+                  <FiX size={14} />
+                </button>
+              </div>
+            )}
+            <form
+              className="chat-input-form"
+              onSubmit={tab === 'public' ? handleSendPublic : handleSendPrivate}
+            >
+              <input
+                type="text"
+                enterKeyHint="send"
+                autoComplete="off"
+                autoCorrect="on"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={tab === 'public' ? 'Message the community…' : 'Type a message…'}
+                maxLength={2000}
+                disabled={sending}
+              />
+              <button type="submit" disabled={sending || !inputValue.trim()} aria-label="Send">
+                <FiSend size={18} />
               </button>
-            </div>
-          )}
-          <form
-            className="chat-input-form"
-            onSubmit={tab === 'public' ? handleSendPublic : handleSendPrivate}
-          >
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={tab === 'public' ? 'Message the community...' : 'Type a message...'}
-              maxLength={2000}
-              disabled={sending}
-            />
-            <button type="submit" disabled={sending || !inputValue.trim()}>
-              <FiSend size={18} />
-            </button>
-          </form>
+            </form>
+          </div>
         </>
       )}
     </div>
