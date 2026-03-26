@@ -1,16 +1,6 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import {
-  BrowserRouter,
-  HashRouter,
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-} from 'react-router-dom';
-
-/** Static hosts (e.g. Render) have no server fallback for /dashboard — hash routes work without rewrites. */
-const AppRouter = import.meta.env.PROD ? HashRouter : BrowserRouter;
+import { BrowserRouter as AppRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI } from './services/api';
 import BrandLogo from './components/BrandLogo';
