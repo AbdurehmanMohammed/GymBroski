@@ -437,55 +437,63 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
 
   return (
     <div className="community-chat">
-      <div className="chat-header">
-        <h3><FiMessageCircle /> Chat with Brukis</h3>
-        {onClose && (
-          <button type="button" className="chat-close-btn" onClick={onClose} aria-label="Close">
-            <FiX size={20} />
-          </button>
-        )}
-      </div>
+      <div className="chat-top-chrome">
+        <div className="chat-header">
+          <h3><FiMessageCircle /> Chat with Brukis</h3>
+          {onClose && (
+            <button type="button" className="chat-close-btn" onClick={onClose} aria-label="Close">
+              <FiX size={20} />
+            </button>
+          )}
+        </div>
 
-      <div className="chat-tabs">
-        <button
-          type="button"
-          className={`chat-tab ${tab === 'public' ? 'active' : ''}`}
-          onClick={() => { setTab('public'); setSelectedConversation(null); }}
-        >
-          <span className="chat-tab-inner">
-            <span className="chat-tab-label">Public</span>
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`chat-tab ${tab === 'private' ? 'active' : ''}`}
-          onClick={() => { setTab('private'); setSelectedConversation(null); }}
-        >
-          <span className="chat-tab-inner">
-            <span className="chat-tab-label">Private</span>
-            {privateConvs.some((c) => (c.unreadCount || 0) > 0) && (
-              <span className="chat-tab-badge" aria-hidden>
-                {privateConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
-              </span>
-            )}
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`chat-tab ${tab === 'group' ? 'active' : ''}`}
-          onClick={() => { setTab('group'); setSelectedConversation(null); }}
-        >
-          <span className="chat-tab-inner">
-            <span className="chat-tab-label">
-              <FiUsers size={14} aria-hidden /> Group
+        <div className="chat-tabs" role="tablist" aria-label="Chat channels">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'public'}
+            className={`chat-tab ${tab === 'public' ? 'active' : ''}`}
+            onClick={() => { setTab('public'); setSelectedConversation(null); }}
+          >
+            <span className="chat-tab-inner">
+              <span className="chat-tab-label">Public</span>
             </span>
-            {groupConvs.some((c) => (c.unreadCount || 0) > 0) && (
-              <span className="chat-tab-badge" aria-hidden>
-                {groupConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'private'}
+            className={`chat-tab ${tab === 'private' ? 'active' : ''}`}
+            onClick={() => { setTab('private'); setSelectedConversation(null); }}
+          >
+            <span className="chat-tab-inner">
+              <span className="chat-tab-label">Private</span>
+              {privateConvs.some((c) => (c.unreadCount || 0) > 0) && (
+                <span className="chat-tab-badge" aria-hidden>
+                  {privateConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+                </span>
+              )}
+            </span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'group'}
+            className={`chat-tab ${tab === 'group' ? 'active' : ''}`}
+            onClick={() => { setTab('group'); setSelectedConversation(null); }}
+          >
+            <span className="chat-tab-inner">
+              <span className="chat-tab-label">
+                <FiUsers size={14} aria-hidden /> Group
               </span>
-            )}
-          </span>
-        </button>
+              {groupConvs.some((c) => (c.unreadCount || 0) > 0) && (
+                <span className="chat-tab-badge" aria-hidden>
+                  {groupConvs.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+                </span>
+              )}
+            </span>
+          </button>
+        </div>
       </div>
 
       {tab === 'private' && !selectedConversation && !showUserPicker && (
