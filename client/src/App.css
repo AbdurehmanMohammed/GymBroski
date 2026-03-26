@@ -717,6 +717,14 @@ body {
     padding-top: 120px;
   }
 
+  .app-root-layer--aurora .main-content:has(> .community-search-wrap) {
+    padding-top: 188px;
+  }
+
+  .app-root-layer--aurora .main-content:has(> .page-header-dashboard) {
+    padding-top: 158px;
+  }
+
   .app-root-layer--aurora .main-content > header {
     position: fixed;
     top: 0;
@@ -1291,6 +1299,31 @@ header h1 {
   color: var(--text-main);
   font-size: 28px;
   margin: 0;
+}
+
+/* Dashboard header: desktop = one row; mobile = tools row + full-width CTA (no overlap) */
+@media (min-width: 769px) {
+  .page-header-dashboard {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .page-header-dashboard__row--tools {
+    display: contents;
+  }
+
+  .page-header-dashboard__row--cta {
+    display: contents;
+  }
+
+  .page-header-dashboard__title-wrap {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 /* Theme toggle: mobile = header, desktop = sidebar */
@@ -7642,6 +7675,55 @@ header h1 {
     overflow-x: hidden;
   }
 
+  /* Community: search sits below fixed header — need extra top padding so input isn’t clipped */
+  .main-content:has(> .community-search-wrap) {
+    padding-top: 188px;
+  }
+
+  /* Dashboard: two-row mobile header (title row + Create button) */
+  .main-content:has(> .page-header-dashboard) {
+    padding-top: 158px;
+  }
+
+  .page-header-dashboard {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .page-header-dashboard__row--tools {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .page-header-dashboard__title-wrap {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .page-header-dashboard__title-wrap h1 {
+    font-size: clamp(17px, 4.5vw, 22px);
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  .page-header-dashboard__row--cta {
+    width: 100%;
+  }
+
+  .page-header-dashboard__row--cta .create-btn {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .page-header-dashboard__row--tools .hamburger-btn {
+    margin-right: 0;
+  }
+
   /* Fixed header on mobile - guaranteed to stay visible when scrolling */
   .main-content > header {
     position: fixed;
@@ -7701,6 +7783,8 @@ header h1 {
   }
 
   .community-search-wrap {
+    position: relative;
+    z-index: 1;
     margin-top: 12px;
     margin-bottom: 12px;
     margin-left: -16px;
@@ -7996,6 +8080,14 @@ header h1 {
     padding: 12px;
     padding-top: 110px; /* Space for fixed header on smaller screens */
     overflow-x: hidden;
+  }
+
+  .main-content:has(> .community-search-wrap) {
+    padding-top: 178px;
+  }
+
+  .main-content:has(> .page-header-dashboard) {
+    padding-top: 152px;
   }
 
   .main-content > header {

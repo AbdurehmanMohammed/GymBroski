@@ -170,19 +170,20 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
       </div>
 
       <div className="main-content">
-        <header>
-          <button type="button" className="hamburger-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-            <FiMenu size={24} />
-          </button>
-          <div className="toggle-mobile">
-            <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} variant="header" />
+        <header className="page-header-dashboard">
+          <div className="page-header-dashboard__row page-header-dashboard__row--tools">
+            <button type="button" className="hamburger-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+              <FiMenu size={24} />
+            </button>
+            <div className="page-header-dashboard__title-wrap">
+              <h1>My Workout Splits</h1>
+            </div>
+            <div className="toggle-mobile">
+              <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} variant="header" />
+            </div>
           </div>
-          <h1>My Workout Splits</h1>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button 
-              className="create-btn"
-              onClick={() => setShowCreateForm(true)}
-            >
+          <div className="page-header-dashboard__row page-header-dashboard__row--cta">
+            <button type="button" className="create-btn" onClick={() => setShowCreateForm(true)}>
               <FiPlusCircle /> Create New Split
             </button>
           </div>
