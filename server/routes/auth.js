@@ -72,6 +72,11 @@ router.post('/register', async (req, res) => {
     });
     await user.save();
 
+    if (!process.env.JWT_SECRET) {
+      console.error('REGISTER: JWT_SECRET is not set (add it in Render → Environment)');
+      return res.status(500).json({ success: false, message: 'Server error during registration' });
+    }
+
     // Create token (new accounts: long session by default)
     const token = jwt.sign(
       { userId: user._id },
@@ -105,9 +110,18 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password, rememberMe } = req.body;
     const stayLoggedIn = rememberMe !== false;
+    const trimmedEmail = String(email || '').trim().toLowerCase();
 
-    // Find user
-    const user = await User.findOne({ email });
+    if (!process.env.JWT_SECRET) {
+      console.error('LOGIN: JWT_SECRET is not set (add it in Render → Environment)');
+      return res.status(500).json({
+        success: false,
+        message: 'Server error during login',
+      });
+    }
+
+    // Find user (same normalization as register / User schema lowercase)
+    const user = await User.findOne({ email: trimmedEmail });
     if (!user) {
       return res.status(401).json({ 
         success: false,
