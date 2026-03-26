@@ -2,39 +2,8 @@ import express from 'express';
 import User from '../models/User.js';
 import WorkoutSplit from '../models/WorkoutSplit.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { deleteUserAndAllRelatedData } from '../services/userCascadeDelete.js';
 
 const router = express.Router();
-
-// Delete own account and all related data (workouts, PRs, chat, challenges score, etc.)
-router.delete('/account', authenticateToken, async (req, res) => {
-  try {
-    const { password } = req.body || {};
-    if (!password || typeof password !== 'string') {
-      return res.status(400).json({ success: false, message: 'Password is required to delete your account' });
-    }
-
-    const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    const valid = await user.comparePassword(password);
-    if (!valid) {
-      return res.status(401).json({ success: false, message: 'Incorrect password' });
-    }
-
-    const result = await deleteUserAndAllRelatedData(req.userId);
-    if (!result.ok) {
-      return res.status(404).json({ success: false, message: result.message || 'Could not delete account' });
-    }
-
-    res.json({ success: true, message: 'Account and all associated data have been deleted' });
-  } catch (error) {
-    console.error('Account delete error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
 
 // Get another user's public profile (name, profilePhoto, points)
 router.get('/:userId', authenticateToken, async (req, res) => {

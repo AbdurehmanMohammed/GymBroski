@@ -1305,6 +1305,58 @@ header h1 {
   margin: 0;
 }
 
+/* Profile: title + subtitle stack on mobile (no overlap with hamburger row) */
+.profile-page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.profile-page-header__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-page-header__titles {
+  width: 100%;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.profile-page-header__titles h1 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.profile-page-header__subtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media (min-width: 769px) {
+  .profile-page-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .profile-page-header__titles {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .profile-page-header__tools {
+    order: 2;
+    flex-shrink: 0;
+  }
+}
+
 /* Dashboard header: desktop = one row; mobile = tools row + full-width CTA (no overlap) */
 @media (min-width: 769px) {
   .page-header-dashboard {
@@ -2659,8 +2711,9 @@ header h1 {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px 12px 12px;
-  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px;
+  /* Space above fixed composer (mobile): --chat-composer-pad set by JS; no extra flex “gap” strip */
+  padding-bottom: calc(12px + var(--chat-composer-pad, 0px) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2975,12 +3028,6 @@ header h1 {
   color: var(--text-subtle);
 }
 
-/* In-flow gap under messages; height set by JS (--chat-composer-spacer) on mobile */
-.chat-composer-spacer {
-  display: none;
-  flex-shrink: 0;
-}
-
 .chat-input-stack {
   flex-shrink: 0;
   display: flex;
@@ -3041,12 +3088,6 @@ header h1 {
 }
 
 @media (max-width: 768px) {
-  .chat-composer-spacer {
-    display: block;
-    height: var(--chat-composer-spacer, 88px);
-    min-height: var(--chat-composer-spacer, 88px);
-  }
-
   .chat-input-stack--mobile-fixed {
     position: fixed;
     left: 0;
@@ -3077,7 +3118,7 @@ header h1 {
   }
 
   .chat-messages {
-    padding-bottom: 8px;
+    padding-bottom: calc(8px + var(--chat-composer-pad, 64px) + env(safe-area-inset-bottom, 0px));
   }
 }
 

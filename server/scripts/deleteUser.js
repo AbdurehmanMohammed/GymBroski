@@ -1,5 +1,5 @@
 /**
- * Delete a user and all related data (same as DELETE /api/profile/account).
+ * Delete a user and all related data (same cascade as DELETE /api/admin/users/:id with X-Admin-Secret).
  * Usage (from server/): node scripts/deleteUser.js <mongoObjectId>
  *    or: node scripts/deleteUser.js email:user@example.com
  *

@@ -88,11 +88,11 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
 
     const apply = () => {
       if (!window.matchMedia('(max-width: 768px)').matches) {
-        root.style.removeProperty('--chat-composer-spacer');
+        root.style.removeProperty('--chat-composer-pad');
         return;
       }
       const h = Math.ceil(el.getBoundingClientRect().height);
-      root.style.setProperty('--chat-composer-spacer', `${Math.max(72, h)}px`);
+      root.style.setProperty('--chat-composer-pad', `${Math.max(56, h)}px`);
     };
 
     const ro = new ResizeObserver(apply);
@@ -102,7 +102,7 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', apply);
-      root.style.removeProperty('--chat-composer-spacer');
+      root.style.removeProperty('--chat-composer-pad');
     };
   }, [replyingTo, tab, selectedConversation]);
 
@@ -959,7 +959,6 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
             </div>
           )}
 
-          <div className="chat-composer-spacer" aria-hidden />
           <div ref={composerStackRef} className="chat-input-stack chat-input-stack--mobile-fixed">
             {replyingTo && (
               <div className="chat-reply-preview">

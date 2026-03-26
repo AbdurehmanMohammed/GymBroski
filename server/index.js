@@ -17,6 +17,7 @@ import progressPhotosRoutes from './routes/progressPhotos.js';
 import challengesRoutes from './routes/challenges.js';
 import workoutSessionsRoutes from './routes/workoutSessions.js';
 import chatRoutes from './routes/chat.js';
+import adminRoutes from './routes/admin.js';
 
 // Import models
 import './models/User.js';
@@ -45,6 +46,7 @@ app.use('/api/progress-photos', progressPhotosRoutes);
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/workout-sessions', workoutSessionsRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Test route
 app.get('/', (req, res) => {
