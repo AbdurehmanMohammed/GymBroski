@@ -153,7 +153,7 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
         </button>
       </div>
 
-      <div className="main-content">
+      <div className="main-content community-feed-layout">
         <header>
           <button type="button" className="hamburger-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
             <FiMenu size={24} />
@@ -346,7 +346,10 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
         )}
 
         {communityTab === 'chat' && (
-          <section className="community-chat-page">
+          <>
+            {/* Same vertical offset as Workouts tab (search row) so layout does not jump when switching */}
+            <div className="community-chat-tab-spacer" aria-hidden />
+            <section className="community-chat-page">
             <div className="community-chat-wrapper community-chat-full">
               <CommunityChat
                 currentUser={currentUser}
@@ -354,6 +357,7 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
               />
             </div>
           </section>
+          </>
         )}
       </div>
 

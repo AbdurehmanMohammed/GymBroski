@@ -82,6 +82,8 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
   const [emailWorkoutReminders, setEmailWorkoutReminders] = useState(true);
   const [emailChatNotifications, setEmailChatNotifications] = useState(true);
   const [reminderSaving, setReminderSaving] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
   const [myWorkouts, setMyWorkouts] = useState([]);
   const [scheduleDraft, setScheduleDraft] = useState(() =>
     Array.from({ length: 7 }, (_, d) => ({ day: d, workoutId: '' }))
@@ -91,6 +93,33 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
   const navTo = (path) => {
     navigate(path);
     closeMenu();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteAccountPassword.trim()) {
+      alert('Enter your password to delete your account.');
+      return;
+    }
+    if (
+      !window.confirm(
+        'Delete your account permanently? All workouts, sessions, PRs, tracking, progress photos, chat messages, and challenge points will be removed.'
+      )
+    ) {
+      return;
+    }
+    if (!window.confirm('This cannot be undone. Delete now?')) return;
+    setDeleteAccountBusy(true);
+    try {
+      await profileAPI.deleteAccount(deleteAccountPassword);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      navigate('/login', { replace: true });
+      window.location.reload();
+    } catch (e) {
+      alert(e.message || 'Could not delete account');
+    } finally {
+      setDeleteAccountBusy(false);
+    }
   };
 
   const isDark = theme === 'dark';
@@ -998,6 +1027,57 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
             >
               <FiLogOut /> Logout
             </button>
+
+            <div
+              style={{
+                marginTop: '24px',
+                padding: '16px',
+                borderRadius: '10px',
+                border: '1px solid rgba(185, 28, 28, 0.35)',
+                background: isDark ? 'rgba(127, 29, 29, 0.2)' : '#fef2f2',
+              }}
+            >
+              <h4 style={{ margin: '0 0 8px 0', color: '#b91c1c', fontSize: '15px' }}>Delete account</h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: profileStyles.textMuted, lineHeight: 1.45 }}>
+                Removes everything tied to you: saved workouts, completed sessions, PRs, water/body logs, photos, chats, and challenge points.
+              </p>
+              <input
+                type="password"
+                autoComplete="current-password"
+                placeholder="Your password"
+                value={deleteAccountPassword}
+                onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '10px 12px',
+                  marginBottom: '10px',
+                  borderRadius: '8px',
+                  border: `1px solid ${profileStyles.borderColor}`,
+                  background: profileStyles.fieldBg,
+                  color: profileStyles.textPrimary,
+                  fontSize: '15px',
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleteAccountBusy}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: deleteAccountBusy ? '#94a3b8' : '#b91c1c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: deleteAccountBusy ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {deleteAccountBusy ? 'Deleting…' : 'Delete my account permanently'}
+              </button>
+            </div>
           </div>
         </div>
         )}

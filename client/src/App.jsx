@@ -300,6 +300,10 @@ function App() {
       root.classList.remove('dark-theme');
     }
     localStorage.setItem('theme', theme);
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', theme === 'dark' ? '#020617' : '#f8fafc');
+    }
   }, [theme]);
 
   const toggleTheme = () => {

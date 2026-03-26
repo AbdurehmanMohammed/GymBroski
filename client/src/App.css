@@ -725,6 +725,10 @@ body {
     padding-top: 158px;
   }
 
+  .app-root-layer--aurora .main-content.community-feed-layout {
+    padding-top: 188px;
+  }
+
   .app-root-layer--aurora .main-content > header {
     position: fixed;
     top: 0;
@@ -2421,8 +2425,29 @@ header h1 {
   50% { opacity: 0.9; transform: scale(1.05); }
 }
 
+/* Community: match top padding when Chat tab has no search bar (avoids layout jump vs Workouts) */
+@media (max-width: 768px) {
+  .main-content.community-feed-layout {
+    padding-top: 188px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content.community-feed-layout {
+    padding-top: 178px;
+  }
+}
+
+/* Mirrors .community-search-wrap vertical rhythm on Workouts tab */
+.community-chat-tab-spacer {
+  flex-shrink: 0;
+  min-height: 44px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
 .community-chat-page {
-  margin-top: 24px;
+  margin-top: 0;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -2442,11 +2467,30 @@ header h1 {
   border-top: 2px solid var(--border-soft);
 }
 
+/* Chat shell: parallel structure in light/dark (opaque card, not page glass) */
+:root {
+  --chat-shell-bg: #ffffff;
+  --chat-shell-border: #e2e8f0;
+  --chat-shell-shadow: 0 4px 24px rgba(15, 23, 42, 0.1);
+  --chat-tabs-row-bg: #f1f5f9;
+  --chat-bubble-other-bg: #f8fafc;
+  --chat-bubble-other-border: #cbd5e1;
+}
+
+.dark-theme {
+  --chat-shell-bg: #0f172a;
+  --chat-shell-border: #334155;
+  --chat-shell-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --chat-tabs-row-bg: #1e293b;
+  --chat-bubble-other-bg: #1e293b;
+  --chat-bubble-other-border: #475569;
+}
+
 .community-chat-wrapper {
-  background: var(--bg-card);
+  background: var(--chat-shell-bg);
   border-radius: 16px;
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--chat-shell-border);
+  box-shadow: var(--chat-shell-shadow);
   overflow: hidden;
   min-height: 420px;
   max-height: 560px;
@@ -2489,23 +2533,21 @@ header h1 {
 }
 
 .chat-tabs {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
-  padding: 0 8px;
-  background: var(--bg-card-soft);
-  border-bottom: 1px solid var(--border-soft);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  padding: 0;
+  background: var(--chat-tabs-row-bg);
+  border-bottom: 1px solid var(--chat-shell-border);
+  overflow: hidden;
 }
 
 .chat-tab {
-  flex: 0 0 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 14px;
+  padding: 12px 6px;
   border: none;
   background: none;
   font-size: 14px;
@@ -2520,16 +2562,20 @@ header h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: nowrap;
   max-width: 100%;
+  min-width: 0;
 }
 
 .chat-tab-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-tab.active {
@@ -2828,13 +2874,9 @@ header h1 {
 }
 
 .chat-msg.other .chat-msg-bubble {
-  background: var(--bg-card-soft);
-  border: 1px solid var(--border-soft);
+  background: var(--chat-bubble-other-bg);
+  border: 1px solid var(--chat-bubble-other-border);
   color: var(--text-main);
-}
-
-html:not(.dark-theme) .chat-msg.other .chat-msg-bubble {
-  border-color: #cbd5e1;
 }
 
 .chat-msg-sender {
@@ -2883,8 +2925,8 @@ html:not(.dark-theme) .chat-msg.other .chat-msg-bubble {
   gap: 10px;
   padding: 12px 14px;
   padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid var(--border-soft);
-  background: var(--bg-card-soft);
+  border-top: 1px solid var(--chat-shell-border);
+  background: var(--chat-tabs-row-bg);
 }
 
 .chat-input-form input {
@@ -8189,18 +8231,7 @@ html:not(.dark-theme) .chat-msg.other .chat-msg-bubble {
     left: 12px;
   }
 
-  .community-chat-page {
-    min-height: calc(100vh - 180px);
-  }
-
-  .community-chat-wrapper {
-    max-height: calc(100vh - 140px);
-    min-height: 400px;
-  }
-
-  .community-chat {
-    min-height: 360px;
-  }
+  /* community-chat heights: keep in sync with @media (max-width: 768px) .community-chat-* rules */
 
   header h1 {
     font-size: 20px;

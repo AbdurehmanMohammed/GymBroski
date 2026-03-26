@@ -152,7 +152,23 @@ export const profileAPI = {
     if (!response.ok) throw new Error('Failed to update profile');
     const data = await response.json();
     return data;
-  }
+  },
+
+  deleteAccount: async (password) => {
+    const response = await fetch(`${API_URL}/profile/account`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ password }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to delete account');
+    }
+    return data;
+  },
 };
 
 // Tracking API (body weight, water, PR)
