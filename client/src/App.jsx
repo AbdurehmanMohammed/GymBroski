@@ -1,6 +1,16 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import {
+  BrowserRouter,
+  HashRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from 'react-router-dom';
+
+/** Static hosts (e.g. Render) have no server fallback for /dashboard — hash routes work without rewrites. */
+const AppRouter = import.meta.env.PROD ? HashRouter : BrowserRouter;
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI } from './services/api';
 import BrandLogo from './components/BrandLogo';
@@ -311,7 +321,7 @@ function App() {
   };
 
   return (
-    <Router>
+    <AppRouter>
       {theme === 'light' && (
         <div className="light-iridescence-backdrop" aria-hidden>
           <Iridescence
@@ -460,7 +470,7 @@ function App() {
         />
         </Routes>
       </div>
-    </Router>
+    </AppRouter>
   );
 }
 
