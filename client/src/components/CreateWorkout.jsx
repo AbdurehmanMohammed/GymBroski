@@ -9,6 +9,10 @@ import {
   filterExercisesByNameQuery,
 } from '../data/exerciseLibrary';
 import { getExerciseDemoVideoUrl } from '../utils/exerciseDemoVideo';
+import {
+  convertWeightBetweenUnits,
+  weightDisplayToStoredKg,
+} from '../utils/weightUnits';
 
 // AI suggests workout based on muscle group (rule-based, no external API)
 function getAIWorkout(muscleGroups) {
@@ -31,6 +35,7 @@ function getAIWorkout(muscleGroups) {
           sets: lib.defaultSets,
           reps: lib.defaultReps,
           weight: (lib.defaultWeight && lib.defaultWeight !== '0') ? lib.defaultWeight : '',
+          weightUnit: 'kg',
           muscleGroup: lib.muscleGroup,
         });
       }
@@ -81,6 +86,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
           sets: ex.defaultSets,
           reps: ex.defaultReps,
           weight: (ex.defaultWeight && ex.defaultWeight !== '0') ? ex.defaultWeight : '',
+          weightUnit: 'kg',
           muscleGroup: ex.muscleGroup,
         },
       ],
@@ -97,6 +103,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         sets: e.sets,
         reps: e.reps,
         weight: (e.weight && e.weight !== '0') ? e.weight : '',
+        weightUnit: 'kg',
         muscleGroup: e.muscleGroup || 'Other',
       })),
     });
@@ -127,7 +134,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       ...prev,
       exercises: [
         ...prev.exercises,
-        { name: '', sets: 3, reps: '10', weight: '', muscleGroup: 'Other' },
+        { name: '', sets: 3, reps: '10', weight: '', weightUnit: 'kg', muscleGroup: 'Other' },
       ],
     }));
   };
@@ -142,6 +149,14 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
     setFormData({ ...formData, exercises: next });
   };
 
+  const patchExercise = (index, patch) => {
+    setFormData((prev) => {
+      const row = [...prev.exercises];
+      row[index] = { ...row[index], ...patch };
+      return { ...prev, exercises: row };
+    });
+  };
+
   const applyLibraryToExerciseRow = (index, libEx) => {
     setNameSuggestRow(null);
     setFormData((prev) => {
@@ -153,6 +168,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         reps: libEx.defaultReps,
         weight:
           libEx.defaultWeight && libEx.defaultWeight !== '0' ? libEx.defaultWeight : '',
+        weightUnit: 'kg',
         muscleGroup: libEx.muscleGroup,
       };
       return { ...prev, exercises: next };
@@ -171,13 +187,26 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       setError('Add at least one exercise');
       return;
     }
-    const emptyName = formData.exercises.some((ex) => !String(ex.name || '').trim());
-    if (emptyName) {
-      setError('Every exercise needs a name');
+    const emptyNameIdx = formData.exercises.findIndex((ex) => !String(ex.name || '').trim());
+    if (emptyNameIdx >= 0) {
+      setError('Every exercise needs a name.');
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(`create-exercise-name-${emptyNameIdx}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
       return;
     }
-    if (formData.exercises.some((ex) => !isExerciseWeightProvided(ex))) {
-      setError('Every exercise needs a weight. Enter kg (e.g. 40), 0 if you use no added weight, or Bodyweight.');
+    const missingWeightIdx = formData.exercises.findIndex((ex) => !isExerciseWeightProvided(ex));
+    if (missingWeightIdx >= 0) {
+      setError(
+        'Every exercise needs a weight. Enter a number (kg or lb), 0 if no added weight, or Bodyweight.'
+      );
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(`create-exercise-weight-${missingWeightIdx}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
       return;
     }
     setError('');
@@ -186,14 +215,28 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
 
   const createPayload = () => ({
     ...formData,
-    exercises: formData.exercises.map((ex) => ({
-      name: ex.name,
-      sets: Number(ex.sets) || 3,
-      reps: String(ex.reps ?? 10),
-      weight: String(ex.weight === '' || ex.weight === '0' || ex.weight == null ? '0' : ex.weight),
-      muscleGroup: ex.muscleGroup || 'Other',
-      videoUrl: getExerciseDemoVideoUrl(ex.name),
-    })),
+    exercises: formData.exercises.map((ex) => {
+      const unit = ex.weightUnit || 'kg';
+      const raw = ex.weight;
+      let weightStr;
+      if (raw == null || String(raw).trim() === '') {
+        weightStr = '0';
+      } else if (/^bodyweight$/i.test(String(raw).trim())) {
+        weightStr = String(raw).trim();
+      } else {
+        const kg = weightDisplayToStoredKg(raw, unit);
+        weightStr =
+          kg === '' || kg === '0' || parseFloat(kg) === 0 ? '0' : kg;
+      }
+      return {
+        name: ex.name,
+        sets: Number(ex.sets) || 3,
+        reps: String(ex.reps ?? 10),
+        weight: weightStr,
+        muscleGroup: ex.muscleGroup || 'Other',
+        videoUrl: getExerciseDemoVideoUrl(ex.name),
+      };
+    }),
   });
 
   const handleFinalCreate = async () => {
@@ -340,13 +383,6 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
           </div>
         )}
 
-        {/* Manual add */}
-        {mode === 'manual' && (
-          <button type="button" onClick={addExercise} className="add-exercise-btn">
-            <FiPlus /> Add Exercise Manually
-          </button>
-        )}
-
         <form onSubmit={goToVisibilityStep} className="create-form">
           <div className="form-group">
             <label>Workout Name</label>
@@ -377,6 +413,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                 <div className="exercise-header">
                   <div className="exercise-name-autocomplete-wrap">
                     <input
+                      id={`create-exercise-name-${i}`}
                       type="text"
                       placeholder="Exercise name — type to search (e.g. bic)"
                       value={ex.name}
@@ -455,11 +492,42 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                       onChange={(e) => updateExercise(i, 'reps', e.target.value)}
                     />
                   </div>
-                  <div>
-                    <label>Weight (kg) — required</label>
+                  <div className="exercise-weight-block">
+                    <label htmlFor={`create-exercise-weight-${i}`}>Weight — required</label>
+                    <div className="weight-unit-toggle" role="group" aria-label="Weight unit">
+                      <button
+                        type="button"
+                        className={`weight-unit-toggle__btn ${(ex.weightUnit || 'kg') === 'kg' ? 'active' : ''}`}
+                        onClick={() => {
+                          const cur = ex.weightUnit || 'kg';
+                          if (cur === 'kg') return;
+                          const w = convertWeightBetweenUnits(ex.weight, 'lb', 'kg');
+                          patchExercise(i, { weight: w, weightUnit: 'kg' });
+                        }}
+                      >
+                        kg
+                      </button>
+                      <button
+                        type="button"
+                        className={`weight-unit-toggle__btn ${(ex.weightUnit || 'kg') === 'lb' ? 'active' : ''}`}
+                        onClick={() => {
+                          const cur = ex.weightUnit || 'kg';
+                          if (cur === 'lb') return;
+                          const w = convertWeightBetweenUnits(ex.weight, 'kg', 'lb');
+                          patchExercise(i, { weight: w, weightUnit: 'lb' });
+                        }}
+                      >
+                        lb
+                      </button>
+                    </div>
                     <input
+                      id={`create-exercise-weight-${i}`}
                       type="text"
-                      placeholder="e.g. 40, 0, or Bodyweight"
+                      placeholder={
+                        (ex.weightUnit || 'kg') === 'lb'
+                          ? 'e.g. 90, 0, or Bodyweight'
+                          : 'e.g. 40, 0, or Bodyweight'
+                      }
                       value={ex.weight === '0' || ex.weight === 0 ? '' : (ex.weight ?? '')}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -467,18 +535,15 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                         if (v !== '' && !Number.isNaN(n) && n < 0) return;
                         updateExercise(i, 'weight', v);
                       }}
-                      aria-invalid={!isExerciseWeightProvided(ex)}
                     />
                   </div>
                 </div>
               </div>
               );
             })}
-            {(mode === 'library' || mode === 'template' || mode === 'ai') && (
-              <button type="button" onClick={addExercise} className="add-exercise-btn">
-                <FiPlus /> Add More
-              </button>
-            )}
+            <button type="button" onClick={addExercise} className="add-exercise-btn add-exercise-btn--below-exercises">
+              <FiPlus /> {mode === 'manual' ? 'Add Exercise Manually' : 'Add More'}
+            </button>
           </div>
 
           <div className="form-actions">

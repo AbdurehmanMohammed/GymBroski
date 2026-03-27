@@ -90,6 +90,7 @@ export const EXERCISE_LIBRARY = [
   def('Incline Dumbbell Curl', 'Arms', 'Dumbbell', 3, '10-12'),
   def('Zottman Curl', 'Arms', 'Dumbbell', 3, '10-12'),
   def('Alternating Dumbbell Curl', 'Arms', 'Dumbbell', 3, '10-12 each'),
+  def('Bayesian Curl', 'Arms', 'Cable', 3, '10-12'),
   def('Cable Curl', 'Arms', 'Cable', 3, '12-15'),
   def('Rope Hammer Curl', 'Arms', 'Cable', 3, '12-15'),
   def('Single Arm Cable Curl', 'Arms', 'Cable', 3, '12 each'),

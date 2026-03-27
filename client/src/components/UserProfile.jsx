@@ -302,7 +302,7 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
             ) : (
               <div className="user-profile-workouts-scroll-wrap">
                 <div
-                  className="user-profile-workouts-scroll"
+                  className={`user-profile-workouts-scroll${workouts.length > 1 ? ' user-profile-workouts-scroll--has-multiple' : ''}`}
                   role="region"
                   aria-label="Public workouts list"
                   tabIndex={0}
@@ -358,9 +358,12 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
                     ))}
                   </div>
                 </div>
-                {workouts.length > 2 && (
-                  <p className="user-profile-workouts-scroll-hint">
-                    Scroll inside this box to see all {workouts.length} workouts
+                {workouts.length > 1 && (
+                  <p className="user-profile-workouts-scroll-hint" aria-live="polite">
+                    <span className="user-profile-workouts-scroll-hint__icon" aria-hidden>
+                      ↕
+                    </span>
+                    Scroll to see all {workouts.length} workouts
                   </p>
                 )}
               </div>
