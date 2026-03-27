@@ -46,7 +46,7 @@
   padding: 12px;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -216,6 +216,9 @@ html {
 body {
   overflow-x: hidden;
   background: var(--bg-surface);
+  font-size: var(--font-body);
+  line-height: var(--font-body-line);
+  color: var(--text-main);
 }
 
 #root {
@@ -428,6 +431,22 @@ body {
 
 /* Light aurora: title row sits on the gradient like dark mode — no glass pill wrapper */
 .app-root-layer--aurora .main-content > header {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0 0 4px;
+  margin-bottom: 20px;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Dark aurora uses --dark-aurora (not --aurora), so the rule above never matched — toolbar had margin-bottom: 0 only */
+.dark-theme .app-root-layer--dark-aurora .main-content > header {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
@@ -714,19 +733,30 @@ body {
 
   .app-root-layer--aurora .main-content {
     padding: 16px;
-    padding-top: 120px;
+    padding-top: calc(120px + env(safe-area-inset-top, 0px));
+    /* Allow .main-content > header position:fixed to stick to viewport (not this box) */
+    transform: none;
   }
 
   .app-root-layer--aurora .main-content:has(> .community-search-wrap) {
-    padding-top: 188px;
+    padding-top: calc(188px + env(safe-area-inset-top, 0px));
   }
 
   .app-root-layer--aurora .main-content:has(> .page-header-dashboard) {
-    padding-top: 158px;
+    padding-top: calc(158px + env(safe-area-inset-top, 0px));
   }
 
   .app-root-layer--aurora .main-content.community-feed-layout {
-    padding-top: 188px;
+    padding-top: calc(188px + env(safe-area-inset-top, 0px));
+  }
+
+  /* My Profile: two-row header (tools + titles) — taller than default fixed bar */
+  .app-root-layer--aurora .main-content:has(> header.profile-page-header) {
+    padding-top: calc(172px + env(safe-area-inset-top, 0px));
+  }
+
+  .app-root-layer--aurora .main-content:has(> header.tracking-page-header) {
+    padding-top: calc(140px + env(safe-area-inset-top, 0px));
   }
 
   .app-root-layer--aurora .main-content > header {
@@ -734,13 +764,65 @@ body {
     top: 0;
     left: 0;
     right: 0;
+    width: 100%;
+    box-sizing: border-box;
     margin: 0;
     border-radius: 0;
     border: none;
+    border-bottom: 1px solid var(--border-soft);
     padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
-    z-index: 100;
+    z-index: 200;
+    background: var(--bg-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content {
+    padding: 16px;
+    padding-top: calc(120px + env(safe-area-inset-top, 0px));
+    transform: none;
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content:has(> .community-search-wrap) {
+    padding-top: calc(188px + env(safe-area-inset-top, 0px));
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content:has(> .page-header-dashboard) {
+    padding-top: calc(158px + env(safe-area-inset-top, 0px));
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content.community-feed-layout {
+    padding-top: calc(188px + env(safe-area-inset-top, 0px));
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content:has(> header.profile-page-header) {
+    padding-top: calc(172px + env(safe-area-inset-top, 0px));
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content:has(> header.tracking-page-header) {
+    padding-top: calc(140px + env(safe-area-inset-top, 0px));
+  }
+
+  .dark-theme .app-root-layer--dark-aurora .main-content > header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid var(--border-soft);
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    z-index: 200;
     background: var(--bg-surface);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -762,6 +844,8 @@ body {
 
 /* THEME TOKENS */
 :root {
+  --font-body: 17px;
+  --font-body-line: 1.55;
   --bg-gradient: linear-gradient(145deg, #94a3b8 0%, #64748b 48%, #0d9488 100%);
   --bg-surface: #f1f5f9;
   --bg-card: #ffffff;
@@ -774,6 +858,9 @@ body {
   --text-label: #334155;
   /* Alias used in inline styles */
   --text-muted: #475569;
+  /* Chips / secondary surfaces (community “by …” row, modals) */
+  --bg-secondary: #f1f5f9;
+  --creator-name: #4338ca;
   --shadow-soft: 0 4px 14px rgba(99, 102, 241, 0.1);
   --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.08);
   --accent-light: #eef2ff;
@@ -791,6 +878,8 @@ body {
   --text-subtle: #b8c5d4;
   --text-label: #d1d5db;
   --text-muted: #b8c5d4;
+  --bg-secondary: rgba(30, 41, 59, 0.92);
+  --creator-name: #a5b4fc;
   --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.75);
   --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.9);
   --accent-light: rgba(99, 102, 241, 0.15);
@@ -1173,6 +1262,7 @@ html:not(.dark-theme) .workout-history-empty {
   text-align: left;
   border-radius: 8px;
   cursor: pointer;
+  font-size: 1rem;
   transition: background 0.3s;
 }
 
@@ -1191,6 +1281,7 @@ html:not(.dark-theme) .workout-history-empty {
   color: white;
   border-radius: 8px;
   cursor: pointer;
+  font-size: 1rem;
   transition: background 0.3s;
 }
 
@@ -1330,10 +1421,18 @@ header h1 {
   line-height: 1.2;
 }
 
+/* Match Tracking page subtitle: size + gap under h1 */
 .profile-page-header__subtitle {
-  margin: 8px 0 0;
-  font-size: 14px;
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.45;
+  color: var(--text-label);
+}
+
+.dark-theme .profile-page-header__subtitle {
+  color: var(--text-subtle);
+  font-weight: 400;
 }
 
 @media (min-width: 769px) {
@@ -1355,6 +1454,765 @@ header h1 {
     order: 2;
     flex-shrink: 0;
   }
+}
+
+/* ----- Other user profile (/profile/:userId) ----- */
+.user-profile-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.user-profile-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: 0;
+}
+
+.user-profile-toolbar__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.user-profile-toolbar__row .toggle-mobile {
+  margin-left: auto;
+}
+
+.user-profile-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.user-profile-back-btn:hover {
+  background: var(--bg-card-soft);
+  border-color: #6366f1;
+  transform: translateY(-1px);
+}
+
+/* Match sidebar glass in light aurora — same “frosted chip” as dark (parity) */
+.app-root-layer--aurora .user-profile-back-btn {
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  color: var(--text-main);
+  box-shadow:
+    0 8px 28px rgba(51, 65, 85, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.app-root-layer--aurora .user-profile-back-btn:hover {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(99, 102, 241, 0.45);
+}
+
+.dark-theme .app-root-layer--dark-aurora .user-profile-back-btn {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  color: #e5e7eb;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(148, 163, 184, 0.12);
+}
+
+.dark-theme .app-root-layer--dark-aurora .user-profile-back-btn:hover {
+  background: rgba(30, 41, 59, 0.82);
+  border-color: rgba(129, 140, 248, 0.45);
+}
+
+.dark-theme .user-profile-back-btn {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(71, 85, 105, 0.9);
+}
+
+.dark-theme .user-profile-back-btn:hover {
+  border-color: rgba(129, 140, 248, 0.65);
+}
+
+/* Base color + soft tint only — avoids a bright “hotspot” in the middle */
+.user-profile-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 12px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  max-width: 100%;
+  border: 1px solid var(--border-soft);
+  background-color: var(--bg-card);
+  background-image: linear-gradient(
+    165deg,
+    rgba(99, 102, 241, 0.14) 0%,
+    rgba(99, 102, 241, 0.03) 42%,
+    rgba(236, 72, 153, 0.08) 100%
+  );
+  box-shadow: var(--shadow-card);
+}
+
+@media (min-width: 640px) {
+  .user-profile-hero {
+    grid-template-columns: auto 1fr;
+    padding: 32px 36px;
+    gap: 32px;
+  }
+}
+
+.dark-theme .user-profile-hero {
+  background-color: rgba(15, 23, 42, 0.88);
+  background-image: linear-gradient(
+    165deg,
+    rgba(99, 102, 241, 0.22) 0%,
+    rgba(15, 23, 42, 0.2) 45%,
+    rgba(190, 24, 93, 0.14) 100%
+  );
+  border-color: rgba(71, 85, 105, 0.65);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
+}
+
+/* Light aurora: hero = frosted glass (not flat white) — shows gradient behind */
+.app-root-layer--aurora .user-profile-page .user-profile-hero {
+  background-color: rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(22px) saturate(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 18px 50px rgba(51, 65, 85, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  background-image: linear-gradient(
+    165deg,
+    rgba(99, 102, 241, 0.1) 0%,
+    rgba(255, 255, 255, 0.22) 40%,
+    rgba(236, 72, 153, 0.08) 100%
+  );
+}
+
+/* Dark aurora: same glass treatment as workout cards (matches back button) */
+.dark-theme .app-root-layer--dark-aurora .user-profile-hero {
+  background-color: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(148, 163, 184, 0.12);
+  background-image: linear-gradient(
+    165deg,
+    rgba(99, 102, 241, 0.18) 0%,
+    rgba(15, 23, 42, 0.35) 45%,
+    rgba(190, 24, 93, 0.12) 100%
+  );
+}
+
+.app-root-layer--aurora .user-profile-page .user-profile-panel {
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(18px) saturate(1.05);
+  -webkit-backdrop-filter: blur(18px) saturate(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 12px 36px rgba(51, 65, 85, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.dark-theme .app-root-layer--dark-aurora .user-profile-page .user-profile-panel {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(148, 163, 184, 0.12);
+}
+
+.app-root-layer--aurora .user-profile-page .user-profile-stat {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(203, 213, 225, 0.85);
+}
+
+.dark-theme .app-root-layer--dark-aurora .user-profile-page .user-profile-stat {
+  background: rgba(2, 6, 23, 0.45);
+  border-color: rgba(51, 65, 85, 0.75);
+}
+
+.app-root-layer--aurora .user-profile-page .user-profile-rank-badge:not([class*='--gold']):not([class*='--silver']):not([class*='--bronze']) {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-root-layer--aurora .user-profile-page .user-profile-rank-badge--silver {
+  background: linear-gradient(
+    145deg,
+    rgba(241, 245, 249, 0.58) 0%,
+    rgba(248, 250, 252, 0.66) 100%
+  );
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+}
+
+.app-root-layer--aurora .user-profile-page .user-profile-rank-badge--gold {
+  background: linear-gradient(
+    145deg,
+    rgba(254, 243, 199, 0.58) 0%,
+    rgba(255, 251, 235, 0.68) 100%
+  );
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+}
+
+.app-root-layer--aurora .user-profile-page .user-profile-rank-badge--bronze {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 237, 213, 0.55) 0%,
+    rgba(255, 247, 237, 0.64) 100%
+  );
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+}
+
+.dark-theme .app-root-layer--dark-aurora .user-profile-page .user-profile-rank-badge--silver,
+.dark-theme .app-root-layer--dark-aurora .user-profile-page .user-profile-rank-badge--gold,
+.dark-theme .app-root-layer--dark-aurora .user-profile-page .user-profile-rank-badge--bronze {
+  backdrop-filter: blur(12px) saturate(1.06);
+  -webkit-backdrop-filter: blur(12px) saturate(1.06);
+}
+
+.user-profile-avatar-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .user-profile-avatar-wrap {
+    justify-content: flex-start;
+  }
+}
+
+.user-profile-avatar-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  padding: 4px;
+  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.35);
+}
+
+.user-profile-avatar-ring img,
+.user-profile-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, #4f46e5, #7c3aed);
+}
+
+.user-profile-hero-text {
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .user-profile-hero-text {
+    text-align: left;
+  }
+}
+
+.user-profile-display-name {
+  margin: 0 0 16px;
+  font-size: clamp(24px, 5vw, 30px);
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+/* Challenge points rank (member profile) */
+.user-profile-rank-badge {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 14px;
+  margin: 0 0 16px;
+  text-align: left;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card-soft);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+.user-profile-rank-badge__medal {
+  font-size: 2.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.user-profile-rank-badge__body {
+  min-width: 0;
+}
+
+.user-profile-rank-badge__headline {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.user-profile-rank-badge__line {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-subtle);
+}
+
+.user-profile-rank-badge__meta {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-label);
+}
+
+.user-profile-rank-badge--gold {
+  border-color: rgba(234, 179, 8, 0.55);
+  background: linear-gradient(145deg, rgba(254, 243, 199, 0.95) 0%, rgba(255, 251, 235, 0.98) 100%);
+}
+
+.user-profile-rank-badge--silver {
+  border-color: rgba(148, 163, 184, 0.65);
+  background: linear-gradient(145deg, rgba(241, 245, 249, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+}
+
+.user-profile-rank-badge--bronze {
+  border-color: rgba(180, 83, 9, 0.45);
+  background: linear-gradient(145deg, rgba(255, 237, 213, 0.9) 0%, rgba(255, 247, 237, 0.96) 100%);
+}
+
+.user-profile-rank-badge--elite,
+.user-profile-rank-badge--top10,
+.user-profile-rank-badge--chaser,
+.user-profile-rank-badge--climber,
+.user-profile-rank-badge--grinder,
+.user-profile-rank-badge--rookie,
+.user-profile-rank-badge--solo {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.08) 0%, var(--bg-card-soft) 100%);
+}
+
+.dark-theme .user-profile-rank-badge {
+  border-color: rgba(71, 85, 105, 0.85);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.dark-theme .user-profile-rank-badge--gold {
+  border-color: rgba(250, 204, 21, 0.4);
+  background: linear-gradient(145deg, rgba(113, 63, 18, 0.55) 0%, rgba(15, 23, 42, 0.75) 100%);
+}
+
+.dark-theme .user-profile-rank-badge--silver {
+  border-color: rgba(148, 163, 184, 0.45);
+  background: linear-gradient(145deg, rgba(51, 65, 85, 0.5) 0%, rgba(15, 23, 42, 0.75) 100%);
+}
+
+.dark-theme .user-profile-rank-badge--bronze {
+  border-color: rgba(180, 83, 9, 0.4);
+  background: linear-gradient(145deg, rgba(120, 53, 15, 0.45) 0%, rgba(15, 23, 42, 0.75) 100%);
+}
+
+.dark-theme .user-profile-rank-badge--elite,
+.dark-theme .user-profile-rank-badge--top10,
+.dark-theme .user-profile-rank-badge--chaser,
+.dark-theme .user-profile-rank-badge--climber,
+.dark-theme .user-profile-rank-badge--grinder,
+.dark-theme .user-profile-rank-badge--rookie,
+.dark-theme .user-profile-rank-badge--solo {
+  border-color: rgba(129, 140, 248, 0.35);
+  background: linear-gradient(145deg, rgba(79, 70, 229, 0.2) 0%, rgba(15, 23, 42, 0.72) 100%);
+}
+
+.user-profile-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+/* Three columns only on tablet+ — phones stay one column (readable labels) */
+@media (min-width: 768px) {
+  .user-profile-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.user-profile-stat {
+  padding: 14px 14px;
+  border-radius: 14px;
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-soft);
+  text-align: center;
+  min-width: 0;
+}
+
+.dark-theme .user-profile-stat {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(51, 65, 85, 0.85);
+}
+
+.user-profile-stat__value {
+  display: block;
+  font-size: clamp(22px, 5vw, 26px);
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.15;
+}
+
+.user-profile-stat__label {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  line-height: 1.35;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+@media (min-width: 768px) {
+  .user-profile-stat__label {
+    font-size: 12px;
+  }
+}
+
+.user-profile-since {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .user-profile-since {
+    justify-content: flex-start;
+  }
+}
+
+.user-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .user-profile-grid {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+
+.user-profile-panel {
+  padding: 22px 20px;
+  border-radius: 18px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.dark-theme .user-profile-panel {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(51, 65, 85, 0.85);
+}
+
+.user-profile-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.user-profile-panel__head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.user-profile-panel__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.15));
+  color: #6366f1;
+}
+
+.dark-theme .user-profile-panel__icon {
+  color: #a5b4fc;
+}
+
+/* Public workouts: fixed-height panel, scroll inside (same box for 2 or 10 workouts) */
+.user-profile-panel--workouts {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.user-profile-workouts-scroll-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.user-profile-workouts-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  padding: 10px 8px 12px 10px;
+  border-radius: 14px;
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-soft);
+  box-sizing: border-box;
+  /* ~2 visible “slots”: 2 columns = one row; 1 column = two stacked cards */
+  max-height: min(620px, 68vh);
+}
+
+@media (min-width: 900px) {
+  .user-profile-workouts-scroll {
+    max-height: min(440px, 48vh);
+  }
+}
+
+.dark-theme .user-profile-workouts-scroll {
+  background: rgba(2, 6, 23, 0.5);
+  border-color: rgba(51, 65, 85, 0.75);
+}
+
+.user-profile-workouts-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.user-profile-workouts-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 8px;
+}
+
+.user-profile-workouts-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.user-profile-workouts-scroll .user-profile-workouts-grid {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.user-profile-workouts-scroll-hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  text-align: center;
+  line-height: 1.35;
+}
+
+/* Phones & small tablets: toolbar stack, hero/rank/readable stats */
+@media (max-width: 767px) {
+  .user-profile-toolbar__row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'ham theme'
+      'back back';
+    align-items: center;
+    gap: 10px;
+  }
+
+  .user-profile-toolbar__row .hamburger-btn {
+    grid-area: ham;
+  }
+
+  .user-profile-toolbar__row .toggle-mobile {
+    grid-area: theme;
+    margin-left: 0;
+    justify-self: end;
+  }
+
+  .user-profile-back-btn {
+    grid-area: back;
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .user-profile-hero {
+    padding: 16px 12px;
+    border-radius: 16px;
+    gap: 16px;
+  }
+
+  .user-profile-avatar-ring {
+    width: 104px;
+    height: 104px;
+  }
+
+  .user-profile-rank-badge {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px 12px;
+    gap: 10px;
+  }
+
+  .user-profile-rank-badge__medal {
+    font-size: 1.75rem;
+  }
+
+  .user-profile-rank-badge__body {
+    text-align: center;
+  }
+
+  .user-profile-rank-badge__headline {
+    font-size: 14px;
+  }
+
+  .user-profile-rank-badge__line {
+    font-size: 13px;
+  }
+
+  .user-profile-rank-badge__meta {
+    font-size: 11px;
+  }
+
+  .user-profile-stat {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    gap: 12px;
+  }
+
+  .user-profile-stat__value {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .user-profile-stat__label {
+    margin-top: 0;
+    text-align: right;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .user-profile-panel {
+    padding: 18px 14px;
+  }
+
+  .user-profile-workouts-scroll {
+    max-height: min(520px, 62vh);
+  }
+}
+
+@media (max-width: 479px) {
+  .user-profile-back-btn {
+    font-size: 13px;
+    padding: 9px 10px;
+  }
+}
+
+/* Full exercise names on this page (no harsh ellipsis) */
+.user-profile-page .exercise-item-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.user-profile-page .workout-card {
+  max-width: none;
+}
+
+.user-profile-empty {
+  margin: 0;
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--text-subtle);
+  border-radius: 12px;
+  background: var(--bg-card-soft);
+  border: 1px dashed var(--border-soft);
+}
+
+.user-profile-pr-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: var(--bg-card-soft);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dark-theme .user-profile-pr-item {
+  background: rgba(2, 6, 23, 0.55);
+}
+
+.user-profile-pr-item strong {
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.user-profile-pr-item .pr-date {
+  font-size: 13px;
+  color: var(--text-subtle);
 }
 
 /* Dashboard header: desktop = one row; mobile = tools row + full-width CTA (no overlap) */
@@ -1776,6 +2634,110 @@ header h1 {
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
 }
 
+/* Community workout card — creator row (“by Name”) */
+.workout-card-creator-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-soft);
+  width: 100%;
+  text-align: left;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  box-sizing: border-box;
+  transform: scale(1);
+  transform-origin: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.workout-card-creator-btn:disabled {
+  cursor: default;
+  opacity: 0.9;
+}
+
+/* Slightly larger on hover (pointer) or press (touch) — easier to target */
+@media (hover: hover) and (pointer: fine) {
+  .workout-card-creator-btn:not(:disabled):hover {
+    transform: scale(1.045);
+    border-color: rgba(99, 102, 241, 0.45);
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.18);
+  }
+}
+
+.workout-card-creator-btn:not(:disabled):active {
+  transform: scale(1.045);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.2);
+}
+
+.workout-card-creator-btn:not(:disabled):focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.65);
+  outline-offset: 3px;
+  transform: scale(1.045);
+}
+
+.app-root-layer--aurora .workout-card-creator-btn {
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.dark-theme .app-root-layer--dark-aurora .workout-card-creator-btn {
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(16px) saturate(1.06);
+  -webkit-backdrop-filter: blur(16px) saturate(1.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.workout-card-creator-btn img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(99, 102, 241, 0.6);
+  flex-shrink: 0;
+}
+
+.workout-card-creator-btn__avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.workout-card-creator-btn__byline {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.workout-card-creator-btn__by {
+  font-weight: 500;
+  color: var(--text-label);
+}
+
+.workout-card-creator-btn__name {
+  font-weight: 700;
+  color: var(--creator-name);
+}
+
 /* Workout Grid */
 .workouts-grid {
   display: grid;
@@ -1842,7 +2804,7 @@ header h1 {
 }
 
 .copied-from {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-subtle);
   margin: -8px 0 8px 0;
 }
@@ -1851,7 +2813,7 @@ header h1 {
   color: var(--text-subtle);
   margin-bottom: 16px;
   line-height: 1.5;
-  font-size: 14px;
+  font-size: 16px;
   min-height: 2.5em;
 }
 
@@ -1910,14 +2872,14 @@ header h1 {
 
 .exercise-item-meta {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-subtle);
   text-align: right;
 }
 
 .more-exercises {
   padding-top: 8px;
-  font-size: 13px;
+  font-size: 14px;
   color: #999;
   font-style: italic;
 }
@@ -1939,7 +2901,7 @@ header h1 {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 15px;
   transition:
     transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.3s ease,
@@ -2406,7 +3368,7 @@ header h1 {
   padding: 12px 16px 12px 44px;
   border: 2px solid var(--border-soft);
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 17px;
   background: var(--bg-card);
   color: var(--text-main);
   transition: border-color 0.2s;
@@ -2435,7 +3397,7 @@ header h1 {
   padding: 10px 18px;
   border: none;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-subtle);
   background: var(--bg-card-soft);
@@ -2627,7 +3589,7 @@ header h1 {
   border-radius: 0;
   box-sizing: border-box;
   background: transparent;
-  font-size: clamp(12px, 3.4vw, 14px);
+  font-size: clamp(13px, 3.4vw, 15px);
   font-weight: 700;
   color: var(--chat-tab-text);
   cursor: pointer;
@@ -2819,7 +3781,7 @@ header h1 {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 8px;
   border-left: 3px solid var(--accent);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .chat-msg.own .chat-msg-reply-preview {
@@ -2941,14 +3903,14 @@ header h1 {
   padding: 8px 12px;
   border: 1px solid var(--border-soft);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   background: var(--bg-card-soft);
   color: var(--text-main);
 }
 
 .chat-msg-edit button {
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: 13px;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid var(--border-soft);
@@ -2979,7 +3941,7 @@ header h1 {
 
 .chat-msg-sender {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--chat-tab-active);
   margin-bottom: 2px;
@@ -2988,14 +3950,14 @@ header h1 {
 
 .chat-msg-content {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.35;
+  font-size: 17px;
+  line-height: 1.4;
   word-break: break-word;
 }
 
 .chat-msg-time {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.72;
   margin-top: 4px;
   text-align: right;
@@ -3023,7 +3985,7 @@ header h1 {
   background: var(--chat-tabs-row-bg);
   border: 1px solid var(--chat-shell-border);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-subtle);
 }
@@ -3059,7 +4021,7 @@ header h1 {
   padding: 11px 16px;
   border: 1px solid var(--border-soft);
   border-radius: 22px;
-  font-size: 16px;
+  font-size: 17px;
   background: var(--bg-card);
   color: var(--text-main);
   touch-action: manipulation;
@@ -3665,6 +4627,63 @@ header h1 {
   margin: 0 0 8px 0;
 }
 
+.view-modal-creator-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-soft);
+}
+
+.dark-theme .view-modal-creator-card {
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.view-modal-creator-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.view-modal-creator-card img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(99, 102, 241, 0.55);
+  flex-shrink: 0;
+}
+
+.view-modal-creator-card__avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.view-modal-creator-card__name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.view-modal-creator-card__email {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-subtle);
+}
+
 .view-modal-text {
   color: var(--text-main);
   margin: 0;
@@ -3784,7 +4803,7 @@ header h1 {
   font-weight: 600;
   color: #333;
   margin-bottom: 8px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .form-group input[type="text"],
@@ -3795,7 +4814,7 @@ header h1 {
   padding: 12px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: 17px;
   transition: border-color 0.2s;
   box-sizing: border-box;
   overflow-wrap: break-word;
@@ -5101,6 +6120,112 @@ header h1 {
   color: var(--text-subtle);
   line-height: 1.45;
   max-width: 420px;
+}
+
+/* Profile → Progress photos tab content: extra contrast on glass / purple rails */
+.app-root-layer--aurora .progress-photos-section .progress-photos-title {
+  color: #0f172a;
+}
+
+.app-root-layer--aurora .progress-photos-section .progress-photos-sub {
+  color: #334155;
+}
+
+.dark-theme .app-root-layer--dark-aurora .progress-photos-section .progress-photos-title {
+  color: #f8fafc;
+}
+
+.dark-theme .app-root-layer--dark-aurora .progress-photos-section .progress-photos-sub {
+  color: #cbd5e1;
+}
+
+/* Profile page — Account / Progress Photos tabs (match Tracking: subtitle → tab row rhythm) */
+.profile-page-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0 20px;
+  border-bottom: 2px solid var(--border-soft);
+  padding-bottom: 0;
+}
+
+.profile-page-tab {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 15px;
+  margin-bottom: -2px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-label);
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.profile-page-tab--with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-page-tab--active {
+  background: #667eea;
+  color: #ffffff !important;
+  border-bottom-color: #667eea;
+}
+
+.profile-page-tab:not(.profile-page-tab--active):hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
+.dark-theme .profile-page-tab:not(.profile-page-tab--active) {
+  color: #e2e8f0;
+}
+
+.dark-theme .profile-page-tab:not(.profile-page-tab--active):hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-root-layer--aurora .profile-page-tab:not(.profile-page-tab--active) {
+  color: #1e293b;
+}
+
+.app-root-layer--aurora .profile-page-tab:not(.profile-page-tab--active):hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 768px) {
+  .profile-page-tabs {
+    gap: 8px;
+    padding: 0 4px;
+  }
+
+  .profile-page-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 48px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .profile-page-tab--with-icon {
+    gap: 6px;
+  }
+
+  .profile-page-tab--with-icon svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+  }
 }
 
 .progress-photos-add-btn {
@@ -7920,21 +9045,31 @@ header h1 {
 
   .main-content {
     padding: 16px;
-    padding-top: 120px; /* Space for fixed header (includes sub-tabs on Community Feed) */
+    padding-top: calc(120px + env(safe-area-inset-top, 0px));
     border-radius: 0;
     box-shadow: none;
     min-height: 100vh;
     overflow-x: hidden;
+    /* Critical: base .main-content uses translateZ(0), which traps position:fixed inside this box */
+    transform: none;
   }
 
   /* Community: search sits below fixed header — need extra top padding so input isn’t clipped */
   .main-content:has(> .community-search-wrap) {
-    padding-top: 188px;
+    padding-top: calc(188px + env(safe-area-inset-top, 0px));
   }
 
   /* Dashboard: two-row mobile header (title row + Create button) */
   .main-content:has(> .page-header-dashboard) {
-    padding-top: 158px;
+    padding-top: calc(158px + env(safe-area-inset-top, 0px));
+  }
+
+  .main-content:has(> header.profile-page-header) {
+    padding-top: calc(172px + env(safe-area-inset-top, 0px));
+  }
+
+  .main-content:has(> header.tracking-page-header) {
+    padding-top: calc(140px + env(safe-area-inset-top, 0px));
   }
 
   .page-header-dashboard {
@@ -7976,18 +9111,22 @@ header h1 {
     margin-right: 0;
   }
 
-  /* Fixed header on mobile - guaranteed to stay visible when scrolling */
+  /* Fixed header on mobile — viewport-fixed (needs .main-content { transform:none } above) */
   .main-content > header {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
+    width: 100%;
+    box-sizing: border-box;
     margin: 0;
     padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
-    z-index: 100;
+    z-index: 200;
     background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-soft);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   }
 
@@ -8047,7 +9186,7 @@ header h1 {
 
   .community-search-input {
     padding: 10px 16px 10px 40px;
-    font-size: 14px;
+    font-size: 16px;
     width: 100%;
     max-width: none;
     box-sizing: border-box;
@@ -8072,18 +9211,18 @@ header h1 {
   .community-sub-tab {
     flex: 0 0 auto;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 15px;
   }
 
   .sidebar .nav-btn {
-    font-size: 16px;
+    font-size: 17px;
     padding: 16px 18px;
     min-height: 48px;
     margin: 6px 0;
   }
 
   .sidebar .logout-btn {
-    font-size: 16px;
+    font-size: 17px;
     padding: 16px 18px;
     min-height: 48px;
     margin-top: 12px;
@@ -8164,7 +9303,7 @@ header h1 {
   .action-btn {
     min-height: 44px;
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .create-btn,
@@ -8381,20 +9520,29 @@ header h1 {
 @media (max-width: 480px) {
   .main-content {
     padding: 12px;
-    padding-top: 110px; /* Space for fixed header on smaller screens */
+    padding-top: calc(110px + env(safe-area-inset-top, 0px));
     overflow-x: hidden;
   }
 
   .main-content:has(> .community-search-wrap) {
-    padding-top: 178px;
+    padding-top: calc(178px + env(safe-area-inset-top, 0px));
   }
 
   .main-content:has(> .page-header-dashboard) {
-    padding-top: 152px;
+    padding-top: calc(152px + env(safe-area-inset-top, 0px));
+  }
+
+  .main-content:has(> header.profile-page-header) {
+    padding-top: calc(162px + env(safe-area-inset-top, 0px));
+  }
+
+  .main-content:has(> header.tracking-page-header) {
+    padding-top: calc(132px + env(safe-area-inset-top, 0px));
   }
 
   .main-content > header {
     padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
     padding-left: max(12px, env(safe-area-inset-left));
     padding-right: max(12px, env(safe-area-inset-right));
   }

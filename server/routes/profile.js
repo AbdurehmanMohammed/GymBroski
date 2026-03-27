@@ -5,18 +5,35 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+/** Rank by challenge points: 1 = highest. Ties share the same rank (competition ranking). */
+async function getLeaderboardMetaForPoints(points) {
+  const pts = points ?? 0;
+  const [higherPointsCount, leaderboardTotalUsers] = await Promise.all([
+    User.countDocuments({ points: { $gt: pts } }),
+    User.countDocuments({})
+  ]);
+  return {
+    leaderboardRank: higherPointsCount + 1,
+    leaderboardTotalUsers
+  };
+}
+
 // Get another user's public profile (name, profilePhoto, points)
 router.get('/:userId', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select('name profilePhoto points');
+    const user = await User.findById(req.params.userId).select('name profilePhoto points createdAt');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+    const pts = user.points ?? 0;
+    const lb = await getLeaderboardMetaForPoints(pts);
     res.json({
       success: true,
       name: user.name,
       profilePhoto: user.profilePhoto || '',
-      points: user.points ?? 0
+      points: pts,
+      createdAt: user.createdAt || null,
+      ...lb
     });
   } catch (error) {
     console.error('Public profile fetch error:', error);
@@ -36,13 +53,17 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
+    const pts = user.points ?? 0;
+    const lb = await getLeaderboardMetaForPoints(pts);
+
     res.json({
       success: true,
       name: user.name,
       email: user.email,
       profilePhoto: user.profilePhoto || '',
       createdAt: user.createdAt,
-      points: user.points ?? 0,
+      points: pts,
+      ...lb,
       emailWorkoutReminders: user.emailWorkoutReminders !== false,
       emailChatNotifications: user.emailChatNotifications !== false,
       workoutSchedule: Array.isArray(user.workoutSchedule) ? user.workoutSchedule : [],
@@ -129,6 +150,8 @@ router.put('/', authenticateToken, async (req, res) => {
       });
     }
 
+    const lbAfter = await getLeaderboardMetaForPoints(user.points ?? 0);
+
     res.json({
       success: true,
       name: user.name,
@@ -136,6 +159,7 @@ router.put('/', authenticateToken, async (req, res) => {
       profilePhoto: user.profilePhoto || '',
       createdAt: user.createdAt,
       points: user.points ?? 0,
+      ...lbAfter,
       emailWorkoutReminders: user.emailWorkoutReminders !== false,
       emailChatNotifications: user.emailChatNotifications !== false,
       workoutSchedule: Array.isArray(user.workoutSchedule) ? user.workoutSchedule : [],

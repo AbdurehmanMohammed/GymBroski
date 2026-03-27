@@ -231,59 +231,31 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
                   {/* Creator Info - profile image + name, clickable to profile */}
                   <button
                     type="button"
+                    className="workout-card-creator-btn"
                     onClick={() => workout.userId?._id && navigate(`/profile/${workout.userId._id}`)}
                     disabled={!workout.userId?._id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      marginBottom: '12px',
-                      padding: '8px 10px',
-                      background: 'var(--bg-secondary, #f8f9fa)',
-                      borderRadius: '8px',
-                      border: 'none',
-                      width: '100%',
-                      cursor: workout.userId?._id ? 'pointer' : 'default',
-                      textAlign: 'left'
-                    }}
                   >
                     {workout.userId?.profilePhoto ? (
                       <img
                         src={workout.userId.profilePhoto}
                         alt=""
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '2px solid var(--primary, #667eea)',
-                          flexShrink: 0
-                        }}
                         onError={(e) => {
                           e.target.style.display = 'none';
                           if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'flex';
                         }}
                       />
                     ) : null}
-                    <div style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      background: 'var(--primary, #667eea)',
-                      display: workout.userId?.profilePhoto ? 'none' : 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: 'white',
-                      flexShrink: 0
-                    }}>
+                    <div
+                      className="workout-card-creator-btn__avatar-fallback"
+                      style={{ display: workout.userId?.profilePhoto ? 'none' : 'flex' }}
+                    >
                       {(workout.userId?.name || '?').charAt(0).toUpperCase()}
                     </div>
-                    <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                      by <strong style={{ color: workout.userId?._id ? 'var(--primary, #667eea)' : 'var(--text)' }}>
+                    <span className="workout-card-creator-btn__byline">
+                      <span className="workout-card-creator-btn__by">by </span>
+                      <span className="workout-card-creator-btn__name">
                         {workout.userId?.name || 'Anonymous'}
-                      </strong>
+                      </span>
                     </span>
                   </button>
 
@@ -376,54 +348,29 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
               {/* Creator Info */}
               <div className="view-modal-section">
                 <h4 className="view-modal-label">Created by</h4>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  padding: '12px',
-                  background: 'var(--bg-secondary)',
-                  borderRadius: '10px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="view-modal-creator-card">
+                  <div className="view-modal-creator-card__identity">
                     {selectedWorkout.userId?.profilePhoto ? (
                       <img
                         src={selectedWorkout.userId.profilePhoto}
                         alt=""
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '2px solid var(--primary)',
-                          flexShrink: 0
-                        }}
                         onError={(e) => {
                           e.target.style.display = 'none';
                           if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = 'flex';
                         }}
                       />
                     ) : null}
-                    <div style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: '50%',
-                      background: 'var(--primary)',
-                      display: selectedWorkout.userId?.profilePhoto ? 'none' : 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '18px',
-                      fontWeight: 600,
-                      color: 'white',
-                      flexShrink: 0
-                    }}>
+                    <div
+                      className="view-modal-creator-card__avatar-fallback"
+                      style={{ display: selectedWorkout.userId?.profilePhoto ? 'none' : 'flex' }}
+                    >
                       {(selectedWorkout.userId?.name || '?').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 600, color: 'var(--text)' }}>
+                      <p className="view-modal-creator-card__name">
                         {selectedWorkout.userId?.name || 'Anonymous'}
                       </p>
-                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <p className="view-modal-creator-card__email">
                         {selectedWorkout.userId?.email || 'No email'}
                       </p>
                     </div>

@@ -13,12 +13,14 @@ import {
   FiEye,
   FiCopy,
   FiArrowLeft,
-  FiAward
+  FiAward,
+  FiLayers
 } from 'react-icons/fi';
 import { profileAPI, workoutsAPI, trackingAPI } from '../services/api';
 import ThemeToggle from './ThemeToggle';
 import { resolveExerciseVideoUrl } from '../utils/exerciseDemoVideo';
 import { ExerciseVideoInfoIcon, ExerciseVideoHelpModal } from './ExerciseVideoHelp';
+import LeaderboardRankBadge from './LeaderboardRankBadge';
 
 const UserProfile = ({ theme = 'light', onToggleTheme }) => {
   const { userId } = useParams();
@@ -109,6 +111,16 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
     return profile?.name?.charAt(0).toUpperCase() || '?';
   };
 
+  const memberSinceLabel = () => {
+    const raw = profile?.createdAt;
+    if (!raw) return null;
+    try {
+      return new Date(raw).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    } catch {
+      return null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard">
@@ -184,169 +196,176 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
         </button>
       </div>
 
-      <div className="main-content">
-        <header>
-          <button type="button" className="hamburger-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
-            <FiMenu size={24} />
-          </button>
-          <div className="toggle-mobile">
-            <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} variant="header" />
+      <div className="main-content user-profile-page">
+        <header className="user-profile-toolbar">
+          <div className="user-profile-toolbar__row">
+            <button type="button" className="hamburger-btn" onClick={() => setMenuOpen(true)} aria-label="Open menu">
+              <FiMenu size={24} />
+            </button>
+            <button type="button" className="user-profile-back-btn" onClick={() => navigate('/community')}>
+              <FiArrowLeft size={18} aria-hidden />
+              Back to Community
+            </button>
+            <div className="toggle-mobile">
+              <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} variant="header" />
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/community')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-              marginBottom: '4px'
-            }}
-          >
-            <FiArrowLeft /> Back to Community
-          </button>
-          <h1>Profile</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '8px 0 0 0' }}>
-            Public profile and shared workouts
-          </p>
         </header>
 
-        <div className="profile-card" style={{
-          background: 'var(--card-bg)',
-          borderRadius: '15px',
-          padding: '32px',
-          marginTop: '24px',
-          boxShadow: 'var(--shadow)',
-          maxWidth: '600px'
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-            {profile.profilePhoto ? (
-              <img
-                src={profile.profilePhoto}
-                alt={profile.name}
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '4px solid var(--primary)'
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            <div style={{
-              width: '100px',
-              height: '100px',
-              borderRadius: '50%',
-              background: 'var(--primary-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%))',
-              display: profile.profilePhoto ? 'none' : 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '40px',
-              color: 'white',
-              fontWeight: 'bold'
-            }}>
-              {getInitials()}
-            </div>
-            <h2 style={{ margin: '16px 0 0 0', color: 'var(--text)', fontSize: '24px' }}>{profile.name}</h2>
-            {(profile.points ?? 0) > 0 && (
-              <div style={{
-                marginTop: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                background: 'linear-gradient(135deg, #667eea20 0%, #764ba220 100%)',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--text)'
-              }}>
-                <FiAward color="#667eea" size={16} /> {profile.points ?? 0} pts
+        <section className="user-profile-hero" aria-label="Profile summary">
+          <div className="user-profile-avatar-wrap">
+            <div className="user-profile-avatar-ring">
+              {profile.profilePhoto ? (
+                <img
+                  src={profile.profilePhoto}
+                  alt=""
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const fb = e.target.nextElementSibling;
+                    if (fb) fb.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div
+                className="user-profile-avatar-fallback"
+                style={{ display: profile.profilePhoto ? 'none' : 'flex' }}
+                aria-hidden
+              >
+                {getInitials()}
               </div>
+            </div>
+          </div>
+          <div className="user-profile-hero-text">
+            <h1 className="user-profile-display-name">{profile.name}</h1>
+            {profile.leaderboardRank != null && profile.leaderboardTotalUsers != null && (
+              <LeaderboardRankBadge rank={profile.leaderboardRank} totalUsers={profile.leaderboardTotalUsers} />
+            )}
+            <div className="user-profile-stats" role="list">
+              <div className="user-profile-stat" role="listitem">
+                <span className="user-profile-stat__value">{workouts.length}</span>
+                <span className="user-profile-stat__label">Public workouts</span>
+              </div>
+              <div className="user-profile-stat" role="listitem">
+                <span className="user-profile-stat__value">{prs.length}</span>
+                <span className="user-profile-stat__label">PRs shown</span>
+              </div>
+              <div className="user-profile-stat" role="listitem">
+                <span className="user-profile-stat__value">{profile.points ?? 0}</span>
+                <span className="user-profile-stat__label">Challenge pts</span>
+              </div>
+            </div>
+            {memberSinceLabel() && (
+              <p className="user-profile-since">
+                <FiCalendar size={16} aria-hidden />
+                <span>Member since {memberSinceLabel()}</span>
+              </p>
             )}
           </div>
+        </section>
 
-          <h3 style={{ color: 'var(--text)', marginBottom: '12px', fontSize: '18px' }}>Personal Records</h3>
-          {prs.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>No PRs yet.</p>
-          ) : (
-            <div className="track-list pr-list" style={{ marginBottom: '24px' }}>
-              {prs.map((e) => (
-                <div key={e._id} className="track-item pr-item">
-                  <div>
-                    <strong>{e.exerciseName}</strong> — {e.weight} {e.unit || 'kg'} × {e.reps} reps
-                  </div>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                    {new Date(e.date).toLocaleDateString()}
-                  </span>
-                </div>
-              ))}
+        <div className="user-profile-grid">
+          <section className="user-profile-panel" aria-labelledby="user-profile-pr-heading">
+            <div className="user-profile-panel__head">
+              <span className="user-profile-panel__icon" aria-hidden>
+                <FiAward size={18} />
+              </span>
+              <h2 id="user-profile-pr-heading">Personal records</h2>
             </div>
-          )}
+            {prs.length === 0 ? (
+              <p className="user-profile-empty">No personal records yet.</p>
+            ) : (
+              <div>
+                {prs.map((e) => (
+                  <div key={e._id} className="user-profile-pr-item">
+                    <div>
+                      <strong>{e.exerciseName}</strong> — {e.weight} {e.unit || 'kg'} × {e.reps} reps
+                    </div>
+                    <span className="pr-date">{new Date(e.date).toLocaleDateString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-          <h3 style={{ color: 'var(--text)', marginBottom: '12px', fontSize: '18px' }}>Public workouts</h3>
-          {workouts.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No public workouts yet.</p>
-          ) : (
-            <div className="workouts-grid" style={{ marginTop: '12px' }}>
-              {workouts.map(workout => (
-                <div key={workout._id} className="workout-card">
-                  <div className="card-header">
-                    <h3>{workout.name}</h3>
-                    <span className="visibility public">Public</span>
-                  </div>
-                  <p className="description">{workout.description || 'No description'}</p>
-                  <div className="exercises-preview">
-                    <h4>Exercises:</h4>
-                    {workout.exercises?.length > 0 ? (
-                      <>
-                        {workout.exercises.slice(0, 3).map((ex, i) => (
-                          <div key={i} className="exercise-item">
-                            <div className="exercise-item-left">
-                              <span className="exercise-item-name">{ex.name}</span>
-                              <ExerciseVideoInfoIcon
-                                size={15}
-                                onClick={() =>
-                                  setExerciseVideoHelp({
-                                    name: ex.name,
-                                    url: resolveExerciseVideoUrl(ex),
-                                  })
-                                }
-                              />
-                            </div>
-                            <span className="exercise-item-meta">
-                              {ex.sets} sets × {ex.reps} reps
-                            </span>
-                          </div>
-                        ))}
-                        {workout.exercises.length > 3 && (
-                          <div className="more-exercises">+{workout.exercises.length - 3} more</div>
-                        )}
-                      </>
-                    ) : (
-                      <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>No exercises</p>
-                    )}
-                  </div>
-                  <div className="card-actions">
-                    <button type="button" className="action-btn view" onClick={() => handleView(workout)}>
-                      <FiEye /> View
-                    </button>
-                    <button type="button" className="action-btn copy" onClick={() => handleCopyWorkout(workout)}>
-                      <FiCopy /> Copy
-                    </button>
+          <section
+            className="user-profile-panel user-profile-panel--workouts"
+            aria-labelledby="user-profile-workouts-heading"
+          >
+            <div className="user-profile-panel__head">
+              <span className="user-profile-panel__icon" aria-hidden>
+                <FiLayers size={18} />
+              </span>
+              <h2 id="user-profile-workouts-heading">Public workouts</h2>
+            </div>
+            {workouts.length === 0 ? (
+              <p className="user-profile-empty">No public workouts yet.</p>
+            ) : (
+              <div className="user-profile-workouts-scroll-wrap">
+                <div
+                  className="user-profile-workouts-scroll"
+                  role="region"
+                  aria-label="Public workouts list"
+                  tabIndex={0}
+                >
+                  <div className="workouts-grid user-profile-workouts-grid">
+                    {workouts.map((workout) => (
+                      <div key={workout._id} className="workout-card">
+                        <div className="card-header">
+                          <h3>{workout.name}</h3>
+                          <span className="visibility public">Public</span>
+                        </div>
+                        <p className="description">{workout.description || 'No description'}</p>
+                        <div className="exercises-preview">
+                          <h4>Exercises</h4>
+                          {workout.exercises?.length > 0 ? (
+                            <>
+                              {workout.exercises.slice(0, 3).map((ex, i) => (
+                                <div key={i} className="exercise-item">
+                                  <div className="exercise-item-left">
+                                    <span className="exercise-item-name">{ex.name}</span>
+                                    <ExerciseVideoInfoIcon
+                                      size={15}
+                                      onClick={() =>
+                                        setExerciseVideoHelp({
+                                          name: ex.name,
+                                          url: resolveExerciseVideoUrl(ex),
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                  <span className="exercise-item-meta">
+                                    {ex.sets} sets × {ex.reps} reps
+                                  </span>
+                                </div>
+                              ))}
+                              {workout.exercises.length > 3 && (
+                                <div className="more-exercises">+{workout.exercises.length - 3} more</div>
+                              )}
+                            </>
+                          ) : (
+                            <p style={{ color: 'var(--text-subtle)', fontSize: '15px' }}>No exercises</p>
+                          )}
+                        </div>
+                        <div className="card-actions">
+                          <button type="button" className="action-btn view" onClick={() => handleView(workout)}>
+                            <FiEye /> View
+                          </button>
+                          <button type="button" className="action-btn copy" onClick={() => handleCopyWorkout(workout)}>
+                            <FiCopy /> Copy
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                {workouts.length > 2 && (
+                  <p className="user-profile-workouts-scroll-hint">
+                    Scroll inside this box to see all {workouts.length} workouts
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
         </div>
       </div>
 

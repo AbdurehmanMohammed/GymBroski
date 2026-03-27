@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fi';
 import { profileAPI, progressPhotosAPI, workoutAPI } from '../services/api';
 import ThemeToggle from './ThemeToggle';
+import LeaderboardRankBadge from './LeaderboardRankBadge';
 /** Browser/OS timezone (e.g. America/Toronto, Asia/Riyadh) — no manual pick */
 function getDeviceTimeZone() {
   try {
@@ -422,58 +423,25 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
           </div>
           <div className="profile-page-header__titles">
             <h1>My Profile</h1>
-            <p className="profile-page-header__subtitle" style={{ color: profileStyles.textMuted }}>
-              Manage your account settings
-            </p>
+            <p className="profile-page-header__subtitle">Manage your account settings</p>
           </div>
         </header>
 
         {/* Tab bar */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginTop: '20px',
-          borderBottom: `2px solid ${profileStyles.borderColor}`,
-          paddingBottom: '0'
-        }}>
+        <div className="profile-page-tabs">
           <button
             type="button"
+            className={`profile-page-tab ${profileTab === 'account' ? 'profile-page-tab--active' : ''}`}
             onClick={() => setProfileTab('account')}
-            style={{
-              padding: '12px 24px',
-              background: profileTab === 'account' ? '#667eea' : 'transparent',
-              color: profileTab === 'account' ? 'white' : profileStyles.textMuted,
-              border: 'none',
-              borderRadius: '10px 10px 0 0',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '15px',
-              borderBottom: profileTab === 'account' ? '2px solid #667eea' : '2px solid transparent',
-              marginBottom: '-2px'
-            }}
           >
             Account
           </button>
           <button
             type="button"
+            className={`profile-page-tab profile-page-tab--with-icon ${profileTab === 'photos' ? 'profile-page-tab--active' : ''}`}
             onClick={() => setProfileTab('photos')}
-            style={{
-              padding: '12px 24px',
-              background: profileTab === 'photos' ? '#667eea' : 'transparent',
-              color: profileTab === 'photos' ? 'white' : profileStyles.textMuted,
-              border: 'none',
-              borderRadius: '10px 10px 0 0',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '15px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              borderBottom: profileTab === 'photos' ? '2px solid #667eea' : '2px solid transparent',
-              marginBottom: '-2px'
-            }}
           >
-            <FiImage /> Progress Photos
+            <FiImage aria-hidden /> Progress Photos
           </button>
         </div>
 
@@ -918,6 +886,11 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
                   View Leaderboard
                 </button>
               </div>
+              {user.leaderboardRank != null && user.leaderboardTotalUsers != null && (
+                <div style={{ marginTop: '14px' }}>
+                  <LeaderboardRankBadge rank={user.leaderboardRank} totalUsers={user.leaderboardTotalUsers} />
+                </div>
+              )}
             </div>
 
             {/* Member Since */}
