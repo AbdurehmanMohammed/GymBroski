@@ -7,6 +7,7 @@ import {
   WORKOUT_TEMPLATES,
   MUSCLE_GROUPS,
   EQUIPMENT_TYPES,
+  EXERCISE_LIBRARY_FILTER_LABELS,
   filterExercisesByNameQuery,
 } from '../data/exerciseLibrary';
 import { getExerciseDemoVideoUrl } from '../utils/exerciseDemoVideo';
@@ -344,108 +345,6 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
 
         {phase === 'build' && (
           <>
-        <div className="create-mode-tabs">
-          {modes.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`mode-tab ${mode === m.id ? 'active' : ''}`}
-              onClick={() => setMode(m.id)}
-            >
-              <m.icon /> {m.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Exercise Library */}
-        {mode === 'library' && (
-          <div className="library-section">
-            <div className="library-search">
-              <div className="library-search-input-wrap">
-                <FiSearch className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search exercises..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <select
-                value={filterMuscle}
-                onChange={(e) => setFilterMuscle(e.target.value)}
-              >
-                <option value="All">All muscle groups</option>
-                {MUSCLE_GROUPS.map((mg) => (
-                  <option key={mg} value={mg}>{mg}</option>
-                ))}
-              </select>
-              <select
-                value={filterEquipment}
-                onChange={(e) => setFilterEquipment(e.target.value)}
-              >
-                <option value="All">All equipment</option>
-                {EQUIPMENT_TYPES.map((eq) => (
-                  <option key={eq} value={eq}>{eq}</option>
-                ))}
-              </select>
-            </div>
-            <div className="library-list">
-              {filteredExercises.map((ex) => (
-                <button
-                  key={`${ex.name}-${ex.muscleGroup}-${ex.equipment}`}
-                  type="button"
-                  className="library-item"
-                  onClick={() => addFromLibrary(ex)}
-                >
-                  <span className="lib-name">{ex.name}</span>
-                  <span className="lib-muscle">{ex.muscleGroup}{ex.equipment ? ` • ${ex.equipment}` : ''}</span>
-                  <FiPlus className="lib-add" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Templates */}
-        {mode === 'template' && (
-          <div className="template-section">
-            {WORKOUT_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                className="template-card"
-                onClick={() => applyTemplate(tpl)}
-              >
-                <h4>{tpl.name}</h4>
-                <p>{tpl.description}</p>
-                <span>{tpl.exercises.length} exercises</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* AI Workout */}
-        {mode === 'ai' && (
-          <div className="ai-section">
-            <p>Select muscle groups for AI to generate a workout:</p>
-            <div className="ai-muscle-chips">
-              {MUSCLE_GROUPS.map((mg) => (
-                <button
-                  key={mg}
-                  type="button"
-                  className={`chip ${aiMuscleGroups.includes(mg) ? 'selected' : ''}`}
-                  onClick={() => toggleAiMuscle(mg)}
-                >
-                  {mg}
-                </button>
-              ))}
-            </div>
-            <button type="button" className="ai-generate-btn" onClick={generateAI}>
-              <FiZap /> Generate Workout
-            </button>
-          </div>
-        )}
-
         <form onSubmit={goToVisibilityStep} className="create-form">
           <div className="form-group">
             <label>Workout Name</label>
@@ -607,6 +506,111 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
             <button type="button" onClick={addExercise} className="add-exercise-btn add-exercise-btn--below-exercises">
               <FiPlus /> {mode === 'manual' ? 'Add Exercise Manually' : 'Add More'}
             </button>
+          </div>
+
+          <div className="create-workout-source-panel" aria-label="Add exercises from library or templates">
+            <p className="create-workout-source-heading">Add exercises</p>
+            <p className="create-workout-source-hint">
+              Browse the library, use a template, or generate with AI — exercises appear in your list above.
+            </p>
+            <div className="create-mode-tabs create-mode-tabs--in-panel">
+              {modes.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`mode-tab ${mode === m.id ? 'active' : ''}`}
+                  onClick={() => setMode(m.id)}
+                >
+                  <m.icon /> {m.label}
+                </button>
+              ))}
+            </div>
+
+            {mode === 'library' && (
+              <div className="library-section library-section--in-panel">
+                <div className="library-search">
+                  <div className="library-search-input-wrap">
+                    <FiSearch className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search exercises..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                  <select
+                    value={filterMuscle}
+                    onChange={(e) => setFilterMuscle(e.target.value)}
+                  >
+                    <option value="All">{EXERCISE_LIBRARY_FILTER_LABELS.allMuscleGroups}</option>
+                    {MUSCLE_GROUPS.map((mg) => (
+                      <option key={mg} value={mg}>{mg}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={filterEquipment}
+                    onChange={(e) => setFilterEquipment(e.target.value)}
+                  >
+                    <option value="All">{EXERCISE_LIBRARY_FILTER_LABELS.allEquipment}</option>
+                    {EQUIPMENT_TYPES.map((eq) => (
+                      <option key={eq} value={eq}>{eq}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="library-list">
+                  {filteredExercises.map((ex) => (
+                    <button
+                      key={`${ex.name}-${ex.muscleGroup}-${ex.equipment}`}
+                      type="button"
+                      className="library-item"
+                      onClick={() => addFromLibrary(ex)}
+                    >
+                      <span className="lib-name">{ex.name}</span>
+                      <span className="lib-muscle">{ex.muscleGroup}{ex.equipment ? ` • ${ex.equipment}` : ''}</span>
+                      <FiPlus className="lib-add" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {mode === 'template' && (
+              <div className="template-section template-section--in-panel">
+                {WORKOUT_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    className="template-card"
+                    onClick={() => applyTemplate(tpl)}
+                  >
+                    <h4>{tpl.name}</h4>
+                    <p>{tpl.description}</p>
+                    <span>{tpl.exercises.length} exercises</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {mode === 'ai' && (
+              <div className="ai-section ai-section--in-panel">
+                <p>Select muscle groups for AI to generate a workout:</p>
+                <div className="ai-muscle-chips">
+                  {MUSCLE_GROUPS.map((mg) => (
+                    <button
+                      key={mg}
+                      type="button"
+                      className={`chip ${aiMuscleGroups.includes(mg) ? 'selected' : ''}`}
+                      onClick={() => toggleAiMuscle(mg)}
+                    >
+                      {mg}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="ai-generate-btn" onClick={generateAI}>
+                  <FiZap /> Generate Workout
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="form-actions">

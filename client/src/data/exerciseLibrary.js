@@ -2,6 +2,12 @@
 export const MUSCLE_GROUPS = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Cardio'];
 export const EQUIPMENT_TYPES = ['Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight', 'Other'];
 
+/** First options for library filter `<select>`s — use correct spelling: equipment */
+export const EXERCISE_LIBRARY_FILTER_LABELS = {
+  allMuscleGroups: 'All muscle groups',
+  allEquipment: 'All equipment',
+};
+
 const def = (name, muscleGroup, equipment, sets = 3, reps = '10-12', weight = '0') => ({
   name, muscleGroup, equipment, defaultSets: sets, defaultReps: reps, defaultWeight: weight,
 });

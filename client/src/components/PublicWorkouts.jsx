@@ -373,7 +373,7 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
                     >
                       {(selectedWorkout.userId?.name || '?').charAt(0).toUpperCase()}
                     </div>
-                    <div>
+                    <div className="view-modal-creator-card__text">
                       <p className="view-modal-creator-card__name">
                         {selectedWorkout.userId?.name || 'Anonymous'}
                       </p>
@@ -383,51 +383,27 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
                     </div>
                   </div>
                   {selectedWorkout.userId?._id && (
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="view-modal-creator-card__actions">
                       <button
                         type="button"
+                        className="view-modal-creator-btn view-modal-creator-btn--message"
                         onClick={() => {
                           setShowViewModal(false);
                           setChatWithUser(selectedWorkout.userId);
                           setCommunityTab('chat');
                         }}
-                        style={{
-                          padding: '8px 14px',
-                          background: '#eef2ff',
-                          color: '#6366f1',
-                          border: '2px solid #6366f1',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
                       >
-                        <FiMessageCircle size={14} /> Message
+                        <FiMessageCircle size={14} aria-hidden /> Message
                       </button>
                       <button
                         type="button"
+                        className="view-modal-creator-btn view-modal-creator-btn--profile"
                         onClick={() => {
                           setShowViewModal(false);
                           navigate(`/profile/${selectedWorkout.userId._id}`);
                         }}
-                        style={{
-                          padding: '8px 14px',
-                          background: 'var(--primary)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
                       >
-                        <FiUser size={14} /> View profile
+                        <FiUser size={14} aria-hidden /> View profile
                       </button>
                     </div>
                   )}
