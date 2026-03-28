@@ -14,6 +14,15 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  /** Login alias for platform admin (e.g. "admin"). Normal users omit this. */
+  username: {
+    type: String,
+    sparse: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^[a-z0-9][a-z0-9._-]{1,30}$/, 'Invalid username'],
+  },
   password: {
     type: String,
     required: true
@@ -25,6 +34,18 @@ const userSchema = new mongoose.Schema({
   points: {
     type: Number,
     default: 0
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+    index: true,
+  },
+  /** Block login and API access (admins can toggle). */
+  suspended: {
+    type: Boolean,
+    default: false,
+    index: true,
   },
   /** Email reminder for “today’s” scheduled workout (see jobs/workoutReminders.js) */
   emailWorkoutReminders: {

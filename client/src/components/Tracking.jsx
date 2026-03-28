@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import {
   FiCalendar, FiTrendingUp, FiUser, FiLogOut, FiGlobe, FiZap,
-  FiPlus, FiTrash2, FiDroplet, FiActivity, FiAward, FiMenu, FiX, FiChevronDown
+  FiPlus, FiTrash2, FiDroplet, FiActivity, FiAward, FiMenu, FiX, FiChevronDown, FiShield
 } from 'react-icons/fi';
 import { trackingAPI, workoutsAPI } from '../services/api';
+import { isAdminUser } from '../utils/authRole';
 import ThemeToggle from './ThemeToggle';
 import { CaloriesCalculatorPanel } from './CaloriesCalculator';
 
@@ -238,6 +239,7 @@ const Tracking = ({ theme = 'light', onToggleTheme }) => {
           <button type="button" className="nav-btn active" onClick={closeMenu}>
             <FiActivity /> Tracking
           </button>
+          {isAdminUser() && navBtn('/admin', 'Admin', <FiShield />)}
           {navBtn('/profile', 'Profile', <FiUser />)}
         </nav>
         <button type="button" className="logout-btn" onClick={handleLogout}>

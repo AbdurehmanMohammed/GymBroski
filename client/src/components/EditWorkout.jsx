@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FiX, FiPlus, FiMinus, FiGlobe } from 'react-icons/fi';
-import { workoutAPI } from '../services/api';
+import { FiX, FiPlus, FiMinus, FiGlobe, FiCalendar } from 'react-icons/fi';
+import { workoutAPI, profileAPI } from '../services/api';
+import { mergeScheduleForWorkout, getTrainingDaysForWorkoutFromUser } from '../utils/workoutScheduleMerge';
 import { getExerciseDemoVideoUrl } from '../utils/exerciseDemoVideo';
 import { filterExercisesByNameQuery } from '../data/exerciseLibrary';
 import {
@@ -8,6 +9,24 @@ import {
   weightDisplayToStoredKg,
   storedKgToDisplay,
 } from '../utils/weightUnits';
+
+function getDeviceTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+const WEEKDAY_PICKER = [
+  { d: 0, short: 'Sun' },
+  { d: 1, short: 'Mon' },
+  { d: 2, short: 'Tue' },
+  { d: 3, short: 'Wed' },
+  { d: 4, short: 'Thu' },
+  { d: 5, short: 'Fri' },
+  { d: 6, short: 'Sat' },
+];
 
 const EditWorkout = ({ workout, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -28,6 +47,20 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [nameSuggestRow, setNameSuggestRow] = useState(null);
+  const [trainingDays, setTrainingDays] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      return getTrainingDaysForWorkoutFromUser(u, workout._id);
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleTrainingDay = (d) => {
+    setTrainingDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort((a, b) => a - b)
+    );
+  };
 
   const isExerciseWeightProvided = (ex) => {
     const w = ex.weight;
@@ -86,11 +119,28 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
 
     try {
       await workoutAPI.update(workout._id, payload);
+      try {
+        const raw = JSON.parse(localStorage.getItem('user') || '{}');
+        const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
+        const merged = mergeScheduleForWorkout(existing, workout._id, trainingDays);
+        const prof = await profileAPI.updateProfile({
+          workoutSchedule: merged,
+          timezone: getDeviceTimeZone(),
+        });
+        localStorage.setItem('user', JSON.stringify({ ...raw, ...prof }));
+      } catch (schedErr) {
+        console.error(schedErr);
+        alert(
+          schedErr?.message
+            ? `Workout saved, but schedule update failed: ${schedErr.message}`
+            : 'Workout saved, but schedule could not be updated. Try again from edit.'
+        );
+      }
       onSuccess();
       onClose();
     } catch (err) {
       console.error('Error updating workout:', err);
-      setError(err.response?.data?.message || 'Failed to update workout');
+      setError(err?.message || 'Failed to update workout');
     } finally {
       setLoading(false);
     }
@@ -338,6 +388,37 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
             <button type="button" onClick={addExercise} className="add-exercise-btn">
               <FiPlus /> Add Exercise
             </button>
+          </div>
+
+          <div className="create-schedule-step" style={{ padding: '16px 0 0', marginTop: 8 }}>
+            <div className="create-schedule-hero" style={{ marginBottom: 14 }}>
+              <div className="create-schedule-hero-icon" aria-hidden>
+                <FiCalendar size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem' }}>Reminder days for this split</h3>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: 'var(--text-subtle)' }}>
+                  Tap days you train <strong>{formData.name || 'this workout'}</strong>. Cleared days become rest for
+                  this split. Other workouts on other days are unchanged.
+                </p>
+              </div>
+            </div>
+            <div className="create-schedule-day-grid" role="group" aria-label="Training days">
+              {WEEKDAY_PICKER.map(({ d, short }) => {
+                const on = trainingDays.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`create-schedule-day-btn${on ? ' create-schedule-day-btn--on' : ''}`}
+                    onClick={() => toggleTrainingDay(d)}
+                    aria-pressed={on}
+                  >
+                    <span className="dow-full">{short}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="form-actions">

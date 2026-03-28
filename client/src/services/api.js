@@ -34,6 +34,20 @@ export const authAPI = {
     }
     return response.json();
   },
+
+  /**
+   * Validates session with the API (works when Socket.io cannot reach the backend host).
+   * status 200 = ok; 401/403 = sign out; 204 = skipped (no token).
+   */
+  sessionPing: async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return { status: 204, message: '' };
+    const response = await fetch(`${API_URL}/auth/session`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    return { status: response.status, message: data.message || '' };
+  },
 };
 
 // Workouts API
@@ -67,8 +81,9 @@ export const workoutsAPI = {
       },
       body: JSON.stringify(workoutData),
     });
-    if (!response.ok) throw new Error('Failed to create workout');
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to create workout');
+    return data;
   },
 
   update: async (id, workoutData) => {
@@ -116,6 +131,137 @@ export const workoutsAPI = {
   },
 };
 
+// Admin API (requires role=admin on server)
+export const adminAPI = {
+  getStats: async () => {
+    const response = await fetch(`${API_URL}/admin/stats`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to load stats');
+    return data;
+  },
+  getUsers: async () => {
+    const response = await fetch(`${API_URL}/admin/users`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to load users');
+    return data;
+  },
+  setUserRole: async (userId, role) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ role }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to update role');
+    return data;
+  },
+  deleteUser: async (userId) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to delete user');
+    return data;
+  },
+  setUserPoints: async (userId, points) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/points`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ points }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to update points');
+    return data;
+  },
+  getUser: async (userId) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to load user');
+    return data;
+  },
+  getUserSummary: async (userId) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/summary`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to load summary');
+    return data;
+  },
+  updateUserProfile: async (userId, payload) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to update profile');
+    return data;
+  },
+  setUserPassword: async (userId, newPassword) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/password`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ newPassword }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to set password');
+    return data;
+  },
+  getActivity: async () => {
+    const response = await fetch(`${API_URL}/admin/activity`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to load activity');
+    return data;
+  },
+  setUserSuspended: async (userId, suspended) => {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/suspend`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ suspended }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to update suspension');
+    return data;
+  },
+  clearAllChat: async () => {
+    const response = await fetch(`${API_URL}/admin/chat/clear-all`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ confirm: 'DELETE_ALL_CHAT' }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to clear chat');
+    return data;
+  },
+};
+
 // Profile API
 export const profileAPI = {
   getProfile: async () => {
@@ -124,8 +270,12 @@ export const profileAPI = {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    if (!response.ok) throw new Error('Failed to fetch profile');
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const err = new Error(data.message || 'Failed to fetch profile');
+      err.status = response.status;
+      throw err;
+    }
     return data;
   },
 

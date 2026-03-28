@@ -21,9 +21,12 @@ import {
   FiAward,
   FiBell,
   FiMaximize2,
-  FiUploadCloud
+  FiUploadCloud,
+  FiShield
 } from 'react-icons/fi';
 import { profileAPI, progressPhotosAPI, workoutAPI } from '../services/api';
+import { invalidateFromAuthFailure } from '../utils/sessionInvalidation';
+import { isAdminUser } from '../utils/authRole';
 import ThemeToggle from './ThemeToggle';
 import LeaderboardRankBadge from './LeaderboardRankBadge';
 /** Browser/OS timezone (e.g. America/Toronto, Asia/Riyadh) — no manual pick */
@@ -36,22 +39,6 @@ function getDeviceTimeZone() {
 }
 
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-function workoutIdFromScheduleRow(row) {
-  if (!row) return '';
-  const w = row.workoutId;
-  if (!w) return '';
-  if (typeof w === 'object' && w._id) return String(w._id);
-  return String(w);
-}
-
-function buildScheduleDraftFromUser(userData) {
-  const sched = Array.isArray(userData?.workoutSchedule) ? userData.workoutSchedule : [];
-  return Array.from({ length: 7 }, (_, d) => {
-    const row = sched.find((s) => Number(s.day) === d);
-    return { day: d, workoutId: row ? workoutIdFromScheduleRow(row) : '' };
-  });
-}
 
 const Profile = ({ theme = 'light', onToggleTheme }) => {
   const navigate = useNavigate();
@@ -84,10 +71,6 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
   const [emailChatNotifications, setEmailChatNotifications] = useState(true);
   const [reminderSaving, setReminderSaving] = useState(false);
   const [myWorkouts, setMyWorkouts] = useState([]);
-  const [scheduleDraft, setScheduleDraft] = useState(() =>
-    Array.from({ length: 7 }, (_, d) => ({ day: d, workoutId: '' }))
-  );
-
   const closeMenu = () => setMenuOpen(false);
   const navTo = (path) => {
     navigate(path);
@@ -247,7 +230,6 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
       });
       setEmailWorkoutReminders(userData.emailWorkoutReminders !== false);
       setEmailChatNotifications(userData.emailChatNotifications !== false);
-      setScheduleDraft(buildScheduleDraftFromUser(userData));
       localStorage.setItem('user', JSON.stringify(userData));
 
       const tz = getDeviceTimeZone();
@@ -262,6 +244,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
         }
       }
     } catch (error) {
+      if (invalidateFromAuthFailure(error.status, error.message)) return;
       console.error('Error fetching profile:', error);
     }
   };
@@ -336,22 +319,16 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
   const handleSaveReminders = async () => {
     setReminderSaving(true);
     try {
-      const workoutSchedule = scheduleDraft
-        .filter((row) => row.workoutId)
-        .map((row) => ({ day: row.day, workoutId: row.workoutId }));
-
       const response = await profileAPI.updateProfile({
         emailWorkoutReminders,
         emailChatNotifications,
         workoutReminderHour: 6,
         workoutReminderMinute: 0,
         timezone: getDeviceTimeZone(),
-        workoutSchedule
       });
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const userData = { ...currentUser, ...response };
       setUser(userData);
-      setScheduleDraft(buildScheduleDraftFromUser(userData));
       localStorage.setItem('user', JSON.stringify(userData));
       alert('Notification settings saved!');
     } catch (error) {
@@ -402,6 +379,11 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
           <button type="button" className="nav-btn" onClick={() => navTo('/tracking')}>
             <FiActivity /> Tracking
           </button>
+          {isAdminUser() && (
+            <button type="button" className="nav-btn" onClick={() => navTo('/admin')}>
+              <FiShield /> Admin
+            </button>
+          )}
           <button type="button" className="nav-btn active" onClick={closeMenu}>
             <FiUser /> Profile
           </button>
@@ -704,68 +686,47 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
                 </h3>
               </div>
               <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: profileStyles.textMuted, lineHeight: 1.45 }}>
-                Assign one of your <strong>saved workouts</strong> to each day you train (or leave rest days). We email once in the morning (~6:00 local) on days you have a workout scheduled — timezone below.
+                Your week is built when you <strong>create or edit a workout</strong> — you pick which days that split
+                runs. Any day without a workout is a rest day. We email once in the morning (~6:00 local) on training
+                days only — timezone below.
               </p>
               <div style={{ marginBottom: '16px' }}>
-                <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: profileStyles.textPrimary }}>
-                  Weekly training schedule
+                <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 600, color: profileStyles.textPrimary }}>
+                  Your week at a glance
                 </p>
                 {myWorkouts.length === 0 ? (
                   <p style={{ margin: 0, fontSize: '13px', color: profileStyles.textSubtle, lineHeight: 1.45 }}>
-                    Create workouts under <strong>My Workouts</strong> first, then pick them here for each day.
+                    Create workouts under <strong>My Workouts</strong> and choose training days in the create / edit
+                    flow.
                   </p>
                 ) : (
-                  WEEKDAY_LABELS.map((label, d) => (
-                    <div
-                      key={d}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        marginBottom: '8px',
-                        flexWrap: 'wrap'
-                      }}
-                    >
-                      <span
-                        style={{
-                          minWidth: '92px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          color: profileStyles.textPrimary
-                        }}
-                      >
-                        {label}
-                      </span>
-                      <select
-                        value={scheduleDraft[d]?.workoutId || ''}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setScheduleDraft((prev) => {
-                            const next = [...prev];
-                            next[d] = { day: d, workoutId: v };
-                            return next;
-                          });
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: '160px',
-                          padding: '10px 12px',
-                          borderRadius: '10px',
-                          border: `1px solid ${profileStyles.borderColor}`,
-                          background: profileStyles.fieldBg,
-                          color: profileStyles.textPrimary,
-                          fontSize: '14px'
-                        }}
-                      >
-                        <option value="">Rest</option>
-                        {myWorkouts.map((w) => (
-                          <option key={w._id} value={w._id}>
-                            {w.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                    {WEEKDAY_LABELS.map((label, d) => {
+                      const row = (user.workoutSchedule || []).find((s) => Number(s.day) === d);
+                      const wid = row?.workoutId?._id ?? row?.workoutId;
+                      const wname = wid
+                        ? myWorkouts.find((w) => String(w._id) === String(wid))?.name
+                        : null;
+                      return (
+                        <li
+                          key={d}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            padding: '8px 0',
+                            borderBottom: `1px solid ${profileStyles.borderColor}`,
+                            fontSize: '13px',
+                          }}
+                        >
+                          <span style={{ fontWeight: 600, color: profileStyles.textPrimary }}>{label}</span>
+                          <span style={{ color: wname ? profileStyles.textPrimary : profileStyles.textSubtle }}>
+                            {wname || 'Rest'}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 )}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '14px' }}>

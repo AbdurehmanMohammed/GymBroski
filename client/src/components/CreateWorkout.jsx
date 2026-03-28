@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { FiX, FiPlus, FiMinus, FiSearch, FiZap, FiLayers, FiLock, FiUsers } from 'react-icons/fi';
-import { workoutAPI } from '../services/api';
+import { FiX, FiPlus, FiMinus, FiSearch, FiZap, FiLayers, FiLock, FiUsers, FiCalendar } from 'react-icons/fi';
+import { workoutAPI, profileAPI } from '../services/api';
+import { mergeScheduleForWorkout } from '../utils/workoutScheduleMerge';
 import {
   EXERCISE_LIBRARY,
   WORKOUT_TEMPLATES,
@@ -44,6 +45,24 @@ function getAIWorkout(muscleGroups) {
   return exercises;
 }
 
+function getDeviceTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+const WEEKDAY_PICKER = [
+  { d: 0, short: 'Sun', full: 'Sunday' },
+  { d: 1, short: 'Mon', full: 'Monday' },
+  { d: 2, short: 'Tue', full: 'Tuesday' },
+  { d: 3, short: 'Wed', full: 'Wednesday' },
+  { d: 4, short: 'Thu', full: 'Thursday' },
+  { d: 5, short: 'Fri', full: 'Friday' },
+  { d: 6, short: 'Sat', full: 'Saturday' },
+];
+
 const CreateWorkout = ({ onClose, onSuccess }) => {
   const [mode, setMode] = useState('library'); // library | template | ai | manual
   const [formData, setFormData] = useState({
@@ -58,8 +77,9 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
   const [aiMuscleGroups, setAiMuscleGroups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  /** After building the workout, user chooses Public vs Private before save */
-  const [phase, setPhase] = useState('build'); // 'build' | 'visibility'
+  /** build → visibility → schedule (training days) → save */
+  const [phase, setPhase] = useState('build');
+  const [trainingDays, setTrainingDays] = useState([]);
   /** Which exercise row shows the name autocomplete dropdown */
   const [nameSuggestRow, setNameSuggestRow] = useState(null);
 
@@ -239,11 +259,40 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
     }),
   });
 
+  const toggleTrainingDay = (d) => {
+    setTrainingDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort((a, b) => a - b)
+    );
+  };
+
   const handleFinalCreate = async () => {
     setLoading(true);
     setError('');
     try {
-      await workoutAPI.create(createPayload());
+      const created = await workoutAPI.create(createPayload());
+      const wid = created._id || created.id;
+      if (!wid) throw new Error('Server did not return a workout id');
+
+      if (trainingDays.length > 0) {
+        try {
+          const raw = JSON.parse(localStorage.getItem('user') || '{}');
+          const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
+          const merged = mergeScheduleForWorkout(existing, wid, trainingDays);
+          const prof = await profileAPI.updateProfile({
+            workoutSchedule: merged,
+            timezone: getDeviceTimeZone(),
+          });
+          localStorage.setItem('user', JSON.stringify({ ...raw, ...prof }));
+        } catch (schedErr) {
+          console.error(schedErr);
+          alert(
+            schedErr?.message
+              ? `Workout saved, but schedule update failed: ${schedErr.message}`
+              : 'Workout saved, but training days could not be saved. Edit the workout to set days.'
+          );
+        }
+      }
+
       onSuccess();
       onClose();
     } catch (err) {
@@ -252,6 +301,13 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       setLoading(false);
     }
   };
+
+  const phaseTitle =
+    phase === 'build'
+      ? 'Create Workout Split'
+      : phase === 'visibility'
+        ? 'Who can see this workout?'
+        : 'When do you train?';
 
   const modes = [
     { id: 'library', label: 'Exercise Library', icon: FiSearch },
@@ -265,10 +321,17 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       <div className="modal-content create-workout-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header create-workout-header">
           <div>
-            <h2>{phase === 'visibility' ? 'Who can see this workout?' : 'Create Workout Split'}</h2>
+            <h2>{phaseTitle}</h2>
             {phase === 'visibility' && (
               <p className="create-workout-subtitle">
-                One last step — share with the community or keep it to yourself.
+                Share with the community or keep it private — then you&apos;ll pick training days.
+              </p>
+            )}
+            {phase === 'schedule' && (
+              <p className="create-workout-subtitle">
+                Choose which days you&apos;ll run <strong>{formData.name || 'this split'}</strong>. Other days stay as
+                they are — or rest if nothing is scheduled. Morning emails use your device time zone (
+                {getDeviceTimeZone()}).
               </p>
             )}
           </div>
@@ -604,9 +667,68 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                 type="button"
                 className="submit-btn"
                 disabled={loading}
-                onClick={handleFinalCreate}
+                onClick={() => setPhase('schedule')}
               >
-                {loading ? 'Creating...' : `Create ${formData.isPublic ? 'public' : 'private'} workout`}
+                Continue — training days
+              </button>
+            </div>
+          </div>
+        )}
+
+        {phase === 'schedule' && (
+          <div className="create-schedule-step">
+            <div className="create-schedule-hero">
+              <div className="create-schedule-hero-icon" aria-hidden>
+                <FiCalendar size={24} />
+              </div>
+              <div>
+                <h3>Schedule this split</h3>
+                <p>
+                  Tap each day you plan to do <strong>{formData.name || 'this workout'}</strong>. Leave all off to save
+                  the template only (no email reminders for it until you assign days from edit).
+                </p>
+              </div>
+            </div>
+
+            <div className="create-schedule-day-grid" role="group" aria-label="Training days">
+              {WEEKDAY_PICKER.map(({ d, short, full }) => {
+                const on = trainingDays.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`create-schedule-day-btn${on ? ' create-schedule-day-btn--on' : ''}`}
+                    onClick={() => toggleTrainingDay(d)}
+                    aria-pressed={on}
+                    aria-label={`${full}${on ? ', selected' : ''}`}
+                  >
+                    <span className="dow-full">{short}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="create-schedule-footnote">
+              {trainingDays.length > 0 ? (
+                <>
+                  <strong>{trainingDays.length}</strong> training day{trainingDays.length === 1 ? '' : 's'} selected.
+                  Reminder emails (if enabled in Profile) go out once in the morning on those days, in your time zone.
+                </>
+              ) : (
+                <>No days selected — we&apos;ll only save the workout. You can assign days later by editing it.</>
+              )}
+            </p>
+
+            <div className="form-actions create-visibility-actions">
+              <button type="button" className="cancel-btn" disabled={loading} onClick={() => setPhase('visibility')}>
+                ← Back
+              </button>
+              <button type="button" className="submit-btn" disabled={loading} onClick={handleFinalCreate}>
+                {loading
+                  ? 'Saving...'
+                  : trainingDays.length > 0
+                    ? `Create & schedule (${trainingDays.length} day${trainingDays.length === 1 ? '' : 's'})`
+                    : 'Create workout'}
               </button>
             </div>
           </div>

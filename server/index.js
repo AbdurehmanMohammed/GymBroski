@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -20,7 +21,7 @@ import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 
 // Import models
-import './models/User.js';
+import User from './models/User.js';
 import './models/WorkoutSplit.js';
 import './models/BodyWeight.js';
 import './models/WaterIntake.js';
@@ -30,8 +31,11 @@ import './models/WorkoutSession.js';
 import { normalizeAbstractEmailApiKey } from './services/abstractEmailValidation.js';
 import cron from 'node-cron';
 import { runWorkoutReminderJob } from './jobs/workoutReminders.js';
+import { ensurePlatformAdminFromEnv } from './services/platformAdminBootstrap.js';
+import { attachAdminSocket } from './realtime/adminSocket.js';
 
 const app = express();
+const httpServer = http.createServer(app);
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -54,10 +58,30 @@ app.get('/', (req, res) => {
 });
 
 // MongoDB connection
+async function ensureAdminEmailFromEnv() {
+  const email = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  if (!email) {
+    console.log('[admin] ADMIN_EMAIL not set in .env — add it to promote an account, then restart.');
+    return;
+  }
+  const r = await User.updateOne({ email }, { $set: { role: 'admin' } });
+  if (r.matchedCount === 0) {
+    console.warn(
+      `[admin] ADMIN_EMAIL=${email} — no user with that email. Register that account first, then restart the server.`
+    );
+  } else {
+    console.log(`[admin] role=admin ensured for ${email}`);
+  }
+}
+
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected');
+    attachAdminSocket(httpServer);
+    console.log('Socket.io: /socket.io (JWT — user rooms + admin dashboard)');
+    await ensurePlatformAdminFromEnv();
+    await ensureAdminEmailFromEnv();
     if (process.env.WORKOUT_REMINDER_CRON === 'false') {
       console.log('Workout reminder cron: off');
       return;
@@ -106,7 +130,7 @@ function logAbstractEmailStatus() {
   }
 }
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
   logAbstractEmailStatus();
 });

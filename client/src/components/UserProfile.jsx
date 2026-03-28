@@ -14,9 +14,11 @@ import {
   FiCopy,
   FiArrowLeft,
   FiAward,
-  FiLayers
+  FiLayers,
+  FiShield
 } from 'react-icons/fi';
 import { profileAPI, workoutsAPI, trackingAPI } from '../services/api';
+import { isAdminUser } from '../utils/authRole';
 import ThemeToggle from './ThemeToggle';
 import { resolveExerciseVideoUrl } from '../utils/exerciseDemoVideo';
 import { ExerciseVideoInfoIcon, ExerciseVideoHelpModal } from './ExerciseVideoHelp';
@@ -187,6 +189,11 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
           <button type="button" className="nav-btn" onClick={() => navTo('/tracking')}>
             <FiActivity /> Tracking
           </button>
+          {isAdminUser() && (
+            <button type="button" className="nav-btn" onClick={() => navTo('/admin')}>
+              <FiShield /> Admin
+            </button>
+          )}
           <button type="button" className="nav-btn" onClick={() => navTo('/profile')}>
             <FiUser /> Profile
           </button>

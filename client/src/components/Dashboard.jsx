@@ -16,9 +16,11 @@ import {
   FiMenu,
   FiX,
   FiAward,
-  FiClock
+  FiClock,
+  FiShield
 } from 'react-icons/fi';
 import { workoutAPI, workoutSessionsAPI } from '../services/api';
+import { isAdminUser } from '../utils/authRole';
 import CreateWorkout from './CreateWorkout';
 import EditWorkout from './EditWorkout';
 import ActiveWorkoutSession from './ActiveWorkoutSession';
@@ -160,6 +162,11 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
           <button type="button" className="nav-btn" onClick={() => navTo('/tracking')}>
             <FiActivity /> Tracking
           </button>
+          {isAdminUser() && (
+            <button type="button" className="nav-btn" onClick={() => navTo('/admin')}>
+              <FiShield /> Admin
+            </button>
+          )}
           <button type="button" className="nav-btn" onClick={() => navTo('/profile')}>
             <FiUser /> Profile
           </button>

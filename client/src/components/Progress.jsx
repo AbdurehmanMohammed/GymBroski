@@ -11,9 +11,11 @@ import {
   FiAward,
   FiTarget,
   FiMenu,
-  FiX
+  FiX,
+  FiShield
 } from 'react-icons/fi';
 import { workoutsAPI, workoutSessionsAPI } from '../services/api';
+import { isAdminUser } from '../utils/authRole';
 import ThemeToggle from './ThemeToggle';
 
 const Progress = ({ theme = 'light', onToggleTheme }) => {
@@ -136,6 +138,11 @@ const Progress = ({ theme = 'light', onToggleTheme }) => {
           <button type="button" className="nav-btn" onClick={() => navTo('/tracking')}>
             <FiActivity /> Tracking
           </button>
+          {isAdminUser() && (
+            <button type="button" className="nav-btn" onClick={() => navTo('/admin')}>
+              <FiShield /> Admin
+            </button>
+          )}
           <button type="button" className="nav-btn" onClick={() => navTo('/profile')}>
             <FiUser /> Profile
           </button>

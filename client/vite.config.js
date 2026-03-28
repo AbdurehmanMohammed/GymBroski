@@ -9,10 +9,16 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      proxy: { '/api': { target: proxyTarget, changeOrigin: true } },
+      proxy: {
+        '/api': { target: proxyTarget, changeOrigin: true },
+        '/socket.io': { target: proxyTarget, changeOrigin: true, ws: true },
+      },
     },
     preview: {
-      proxy: { '/api': { target: proxyTarget, changeOrigin: true } },
+      proxy: {
+        '/api': { target: proxyTarget, changeOrigin: true },
+        '/socket.io': { target: proxyTarget, changeOrigin: true, ws: true },
+      },
     },
   }
 })

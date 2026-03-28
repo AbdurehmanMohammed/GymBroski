@@ -1,9 +1,17 @@
 import './App.css';
 import { useState, useEffect } from 'react';
-import { BrowserRouter as AppRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import {
+  BrowserRouter as AppRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
-import { authAPI } from './services/api';
+import { authAPI, profileAPI } from './services/api';
 import BrandLogo from './components/BrandLogo';
+import Admin from './components/Admin';
 import Dashboard from './components/Dashboard';
 import PublicWorkouts from './components/PublicWorkouts';
 import Progress from './components/Progress';
@@ -13,12 +21,21 @@ import Tracking from './components/Tracking';
 import Challenges from './components/Challenges';
 import ThemeToggle from './components/ThemeToggle';
 import ChatNotificationListener from './components/ChatNotificationListener';
+import SessionSocketBridge from './components/SessionSocketBridge';
 import Iridescence from './components/Iridescence';
 import DarkVeil from './components/DarkVeil';
 
 // Login/Register component
+const SESSION_MESSAGES = {
+  removed: 'This account was removed. You can sign in with another account if you have one.',
+  suspended: 'This account was suspended. Contact an administrator if you think this is a mistake.',
+  ended: 'Your session was ended. Please sign in again.',
+};
+
 const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionNotice = searchParams.get('session');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -120,6 +137,33 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           </p>
         </div>
 
+        {sessionNotice && SESSION_MESSAGES[sessionNotice] && (
+          <div
+            role="alert"
+            style={{
+              padding: '14px 16px',
+              borderRadius: 12,
+              marginBottom: 16,
+              fontSize: 14,
+              lineHeight: 1.45,
+              border: '1px solid',
+              ...(sessionNotice === 'suspended'
+                ? {
+                    borderColor: 'rgba(251, 191, 36, 0.45)',
+                    background: isDark ? 'rgba(120, 53, 15, 0.35)' : '#fffbeb',
+                    color: isDark ? '#fde68a' : '#92400e',
+                  }
+                : {
+                    borderColor: isDark ? 'rgba(248, 113, 113, 0.4)' : '#fc8181',
+                    background: isDark ? 'rgba(127, 29, 29, 0.35)' : '#fed7d7',
+                    color: isDark ? '#fecaca' : '#c53030',
+                  }),
+            }}
+          >
+            {SESSION_MESSAGES[sessionNotice]}
+          </div>
+        )}
+
         <div
           className={`auth-toggle-row${isDark ? ' auth-toggle-row--dark' : ''}`}
         >
@@ -171,18 +215,21 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           )}
 
           <div style={styles.inputGroup}>
-            <label style={{ ...styles.label, ...(isDark ? styles.labelDark : {}) }}>Email Address</label>
+            <label style={{ ...styles.label, ...(isDark ? styles.labelDark : {}) }}>
+              {isLogin ? 'Email or admin username' : 'Email Address'}
+            </label>
             <div style={styles.inputContainer}>
               <FaEnvelope style={{ ...styles.inputIcon, ...(isDark ? styles.inputIconDark : {}) }} />
               <input
-                type="email"
+                type={isLogin ? 'text' : 'email'}
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 className="auth-input-field"
                 style={{ ...styles.input, ...(isDark ? styles.inputDark : {}) }}
-                placeholder="you@example.com"
+                placeholder={isLogin ? 'you@example.com or admin' : 'you@example.com'}
                 required
+                autoComplete={isLogin ? 'username' : 'email'}
               />
             </div>
           </div>
@@ -314,6 +361,37 @@ function App() {
     return !!localStorage.getItem('token');
   };
 
+  const isAdmin = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      return u.role === 'admin';
+    } catch {
+      return false;
+    }
+  };
+
+  /** Sync role from API (e.g. after ADMIN_EMAIL promotion) so /admin nav appears without re-login. */
+  const [, setProfileSync] = useState(0);
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return;
+    profileAPI
+      .getProfile()
+      .then((data) => {
+        if (data?.role != null || data?.username != null) {
+          try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            if (data.role != null) u.role = data.role;
+            if (data.username != null) u.username = data.username;
+            localStorage.setItem('user', JSON.stringify(u));
+            setProfileSync((n) => n + 1);
+          } catch {
+            /* ignore */
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <AppRouter>
       {theme === 'light' && (
@@ -349,6 +427,7 @@ function App() {
         }
       >
         <ChatNotificationListener />
+        <SessionSocketBridge />
         <Routes>
         <Route 
           path="/login" 
@@ -455,6 +534,16 @@ function App() {
               <Navigate to="/login" />
             )
           } 
+        />
+        <Route
+          path="/admin"
+          element={
+            isAuthenticated() && isAdmin() ? (
+              <Admin theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />
+            )
+          }
         />
         <Route 
           path="/" 

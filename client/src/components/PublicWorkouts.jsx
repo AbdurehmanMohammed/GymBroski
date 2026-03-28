@@ -15,9 +15,11 @@ import {
   FiAward,
   FiMessageCircle,
   FiGrid,
-  FiSearch
+  FiSearch,
+  FiShield
 } from 'react-icons/fi';
 import { workoutsAPI } from '../services/api';
+import { isAdminUser } from '../utils/authRole';
 import { useChatUnread } from '../hooks/useChatUnread';
 import CommunityChat from './CommunityChat';
 import ThemeToggle from './ThemeToggle';
@@ -144,6 +146,11 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
           <button type="button" className="nav-btn" onClick={() => navTo('/tracking')}>
             <FiActivity /> Tracking
           </button>
+          {isAdminUser() && (
+            <button type="button" className="nav-btn" onClick={() => navTo('/admin')}>
+              <FiShield /> Admin
+            </button>
+          )}
           <button type="button" className="nav-btn" onClick={() => navTo('/profile')}>
             <FiUser /> Profile
           </button>

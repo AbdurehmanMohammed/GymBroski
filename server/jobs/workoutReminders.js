@@ -77,7 +77,7 @@ export async function runWorkoutReminderJob() {
     const logEmail = u.email || String(u._id);
 
     if (!Array.isArray(u.workoutSchedule) || u.workoutSchedule.length === 0) {
-      dbg(logEmail, 'skip: no workout schedule (assign workouts to weekdays in Profile)');
+      dbg(logEmail, 'skip: no workout schedule (assign days when you create or edit a workout)');
       continue;
     }
 
