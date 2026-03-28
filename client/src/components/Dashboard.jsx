@@ -21,6 +21,7 @@ import {
 } from 'react-icons/fi';
 import { workoutAPI, workoutSessionsAPI } from '../services/api';
 import { isAdminUser } from '../utils/authRole';
+import { signOutEverywhere } from '../utils/authStorage';
 import CreateWorkout from './CreateWorkout';
 import EditWorkout from './EditWorkout';
 import ActiveWorkoutSession from './ActiveWorkoutSession';
@@ -70,9 +71,7 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
       console.error('Failed to fetch workout history:', err);
       setWorkoutHistory([]);
       if (err.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+        void signOutEverywhere().then(() => navigate('/login'));
       }
     }
   };
@@ -88,9 +87,7 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
     } catch (error) {
       console.error('Error fetching workouts:', error);
       if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+        void signOutEverywhere().then(() => navigate('/login'));
       }
     }
   };
@@ -122,9 +119,8 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await signOutEverywhere();
     navigate('/login', { replace: true });
     window.location.reload();
   };

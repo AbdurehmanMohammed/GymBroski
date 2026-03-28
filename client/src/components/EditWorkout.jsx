@@ -9,6 +9,7 @@ import {
   weightDisplayToStoredKg,
   storedKgToDisplay,
 } from '../utils/weightUnits';
+import { getParsedAuthUser, setAuthUserJson } from '../utils/authStorage';
 
 function getDeviceTimeZone() {
   try {
@@ -49,7 +50,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
   const [nameSuggestRow, setNameSuggestRow] = useState(null);
   const [trainingDays, setTrainingDays] = useState(() => {
     try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      const u = getParsedAuthUser() || {};
       return getTrainingDaysForWorkoutFromUser(u, workout._id);
     } catch {
       return [];
@@ -120,14 +121,14 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
     try {
       await workoutAPI.update(workout._id, payload);
       try {
-        const raw = JSON.parse(localStorage.getItem('user') || '{}');
+        const raw = getParsedAuthUser() || {};
         const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
         const merged = mergeScheduleForWorkout(existing, workout._id, trainingDays);
         const prof = await profileAPI.updateProfile({
           workoutSchedule: merged,
           timezone: getDeviceTimeZone(),
         });
-        localStorage.setItem('user', JSON.stringify({ ...raw, ...prof }));
+        setAuthUserJson({ ...raw, ...prof });
       } catch (schedErr) {
         console.error(schedErr);
         alert(

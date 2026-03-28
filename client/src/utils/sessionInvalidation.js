@@ -1,9 +1,11 @@
+import { signOutEverywhere } from './authStorage';
+
 /** Hard redirect to login — same outcome as Socket.io `session:invalidate`. */
 export function invalidateClientSession(reason = 'ended') {
   const q = reason === 'suspended' ? 'suspended' : reason === 'removed' ? 'removed' : 'ended';
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  window.location.replace(`/login?session=${q}`);
+  void signOutEverywhere().finally(() => {
+    window.location.replace(`/login?session=${q}`);
+  });
 }
 
 /**

@@ -27,6 +27,7 @@ import {
 import { profileAPI, progressPhotosAPI, workoutAPI } from '../services/api';
 import { invalidateFromAuthFailure } from '../utils/sessionInvalidation';
 import { isAdminUser } from '../utils/authRole';
+import { getParsedAuthUser, setAuthUserJson, signOutEverywhere } from '../utils/authStorage';
 import ThemeToggle from './ThemeToggle';
 import LeaderboardRankBadge from './LeaderboardRankBadge';
 /** Browser/OS timezone (e.g. America/Toronto, Asia/Riyadh) — no manual pick */
@@ -42,7 +43,7 @@ const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
 
 const Profile = ({ theme = 'light', onToggleTheme }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const [user, setUser] = useState(() => getParsedAuthUser());
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -221,7 +222,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
   const fetchProfile = async () => {
     try {
       const response = await profileAPI.getProfile();
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUser = getParsedAuthUser();
       const userData = { ...currentUser, ...response };
       setUser(userData);
       setFormData({
@@ -230,7 +231,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
       });
       setEmailWorkoutReminders(userData.emailWorkoutReminders !== false);
       setEmailChatNotifications(userData.emailChatNotifications !== false);
-      localStorage.setItem('user', JSON.stringify(userData));
+      setAuthUserJson(userData);
 
       const tz = getDeviceTimeZone();
       if ((userData.timezone || '').trim() !== tz) {
@@ -238,7 +239,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
           const tzUp = await profileAPI.updateProfile({ timezone: tz });
           const merged = { ...userData, ...tzUp };
           setUser(merged);
-          localStorage.setItem('user', JSON.stringify(merged));
+          setAuthUserJson(merged);
         } catch (_) {
           /* keep userData if sync fails */
         }
@@ -278,7 +279,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
           // Update state and localStorage
           setUser(response);
           setFormData({ ...formData, profilePhoto: response.profilePhoto });
-          localStorage.setItem('user', JSON.stringify(response));
+          setAuthUserJson(response);
           
           alert('Profile photo updated!');
         } catch (error) {
@@ -304,7 +305,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
       // Update user in localStorage and state
       const updatedUser = { ...user, ...response };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setAuthUserJson(updatedUser);
       
       setIsEditing(false);
       alert('Profile updated successfully!');
@@ -326,10 +327,10 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
         workoutReminderMinute: 0,
         timezone: getDeviceTimeZone(),
       });
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUser = getParsedAuthUser();
       const userData = { ...currentUser, ...response };
       setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+      setAuthUserJson(userData);
       alert('Notification settings saved!');
     } catch (error) {
       console.error('Error saving reminders:', error);
@@ -339,9 +340,8 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await signOutEverywhere();
     navigate('/login', { replace: true });
     window.location.reload();
   };

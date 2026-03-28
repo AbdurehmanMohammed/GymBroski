@@ -10,6 +10,7 @@ import {
 } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI, profileAPI } from './services/api';
+import { getParsedAuthUser, setAuthUserJson, clearAuthSession } from './utils/authStorage';
 import BrandLogo from './components/BrandLogo';
 import Admin from './components/Admin';
 import Dashboard from './components/Dashboard';
@@ -74,8 +75,7 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           password: formData.password,
           rememberMe
         });
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        setAuthUserJson(response.user);
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
@@ -86,8 +86,7 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           ...formData,
           rememberMe
         });
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        setAuthUserJson(response.user);
         setSuccess('Registration successful! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
@@ -333,6 +332,7 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
 
 // Main App Component
 function App() {
+  const [authHydrated, setAuthHydrated] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
@@ -357,14 +357,25 @@ function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
+  useEffect(() => {
+    authAPI
+      .me()
+      .then((data) => {
+        if (data?.user) setAuthUserJson(data.user);
+      })
+      .catch((err) => {
+        if (err?.status === 401 || err?.status === 403) clearAuthSession();
+      })
+      .finally(() => setAuthHydrated(true));
+  }, []);
+
   const isAuthenticated = () => {
-    return !!localStorage.getItem('token');
+    return authHydrated && !!getParsedAuthUser()?.id;
   };
 
   const isAdmin = () => {
     try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
-      return u.role === 'admin';
+      return getParsedAuthUser().role === 'admin';
     } catch {
       return false;
     }
@@ -373,16 +384,16 @@ function App() {
   /** Sync role from API (e.g. after ADMIN_EMAIL promotion) so /admin nav appears without re-login. */
   const [, setProfileSync] = useState(0);
   useEffect(() => {
-    if (!localStorage.getItem('token')) return;
+    if (!authHydrated || !getParsedAuthUser()?.id) return;
     profileAPI
       .getProfile()
       .then((data) => {
         if (data?.role != null || data?.username != null) {
           try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            const u = getParsedAuthUser();
             if (data.role != null) u.role = data.role;
             if (data.username != null) u.username = data.username;
-            localStorage.setItem('user', JSON.stringify(u));
+            setAuthUserJson(u);
             setProfileSync((n) => n + 1);
           } catch {
             /* ignore */
@@ -390,7 +401,24 @@ function App() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [authHydrated]);
+
+  if (!authHydrated) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: theme === 'dark' ? '#020617' : '#f8fafc',
+          color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
+        }}
+      >
+        Loading…
+      </div>
+    );
+  }
 
   return (
     <AppRouter>

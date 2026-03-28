@@ -6,6 +6,7 @@ import { verifyEmailWithAbstract } from '../services/abstractEmailValidation.js'
 import { notifyAdmins } from '../realtime/adminHub.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isStrongPassword, PASSWORD_REQUIREMENTS } from '../utils/passwordPolicy.js';
+import { setAuthCookie, clearAuthCookie } from '../utils/authCookie.js';
 
 const router = express.Router();
 
@@ -90,10 +91,11 @@ router.post('/register', async (req, res) => {
 
     notifyAdmins({ reason: 'user.registered', email: user.email });
 
+    setAuthCookie(res, token, stayLoggedIn);
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully!',
-      token,
       user: {
         id: user._id,
         email: user.email,
@@ -163,10 +165,11 @@ router.post('/login', async (req, res) => {
       { expiresIn: tokenExpiry(stayLoggedIn) }
     );
 
+    setAuthCookie(res, token, stayLoggedIn);
+
     res.json({
       success: true,
       message: 'Login successful!',
-      token,
       user: {
         id: user._id,
         email: user.email,
@@ -188,6 +191,35 @@ router.post('/login', async (req, res) => {
 
 /** Lightweight ping: validates JWT + user still exists and not suspended. Used when Socket.io is unavailable. */
 router.get('/session', authenticateToken, (req, res) => {
+  res.json({ success: true });
+});
+
+/** Restore client user object when cookie is valid (e.g. new tab). */
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) {
+      return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+    }
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        username: user.username || '',
+        name: user.name,
+        role: user.role || 'user',
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (e) {
+    console.error('GET /auth/me:', e);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  clearAuthCookie(res);
   res.json({ success: true });
 });
 

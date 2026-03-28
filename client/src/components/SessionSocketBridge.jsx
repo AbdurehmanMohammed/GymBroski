@@ -9,25 +9,17 @@ import { invalidateClientSession, invalidateFromAuthFailure } from '../utils/ses
 
 /**
  * Socket.io + periodic API session ping (fallback when static site and API are on different hosts).
+ * Auth: httpOnly cookie sent via withCredentials (same as REST).
  */
 export default function SessionSocketBridge() {
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setSocketConnected(false);
-      return undefined;
-    }
-
-    const socket = io(getAdminSocketUrl(), {
-      path: '/socket.io',
-      auth: { token },
-      transports: ['polling', 'websocket'],
-      reconnectionAttempts: 12,
-      reconnectionDelay: 800,
-      timeout: 20000,
-    });
-
+    let socket;
+    let cancelled = false;
     let adminDebounce;
+    let pingTimer;
+    let pingBoot;
+    let onVis;
+
     const scheduleAdminRefresh = (detail) => {
       clearTimeout(adminDebounce);
       adminDebounce = setTimeout(() => {
@@ -35,66 +27,87 @@ export default function SessionSocketBridge() {
       }, 90);
     };
 
-    const onConnect = () => setSocketConnected(true);
-    const onDisconnect = () => setSocketConnected(false);
-    const onConnectError = (err) => {
-      setSocketConnected(false);
-      console.warn('[socket] connect_error — realtime push may be unavailable; session ping will still sign out deleted users.', err?.message || err);
-    };
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('connect_error', onConnectError);
-    socket.on('reconnect', onConnect);
-
-    socket.on('session:invalidate', (payload) => {
-      const reason = String(payload?.reason || '');
-      socket.disconnect();
-      let r = 'ended';
-      if (reason === 'account_suspended') r = 'suspended';
-      else if (reason === 'account_deleted') r = 'removed';
-      invalidateClientSession(r);
-    });
-
-    socket.on('admin:refresh', (payload) => {
-      if (isAdminUser()) scheduleAdminRefresh(payload);
-    });
-
-    if (socket.connected) setSocketConnected(true);
-
-    /** When Socket.io cannot connect to the API, this still detects deleted/suspended accounts within ~15s. */
-    let pingTimer;
-    const runSessionPing = async () => {
-      if (document.visibilityState !== 'visible') return;
-      if (!localStorage.getItem('token')) return;
-      try {
-        const { status, message } = await authAPI.sessionPing();
-        if (status === 401 || status === 403) {
-          invalidateFromAuthFailure(status, message);
-        }
-      } catch {
-        /* network blip — ignore */
+    (async () => {
+      const { status } = await authAPI.sessionPing();
+      if (cancelled) return;
+      if (status !== 200) {
+        setSocketConnected(false);
+        return;
       }
-    };
-    pingTimer = window.setInterval(runSessionPing, 10000);
-    const onVis = () => {
-      if (document.visibilityState === 'visible') runSessionPing();
-    };
-    document.addEventListener('visibilitychange', onVis);
-    const pingBoot = window.setTimeout(runSessionPing, 3000);
+
+      socket = io(getAdminSocketUrl(), {
+        path: '/socket.io',
+        withCredentials: true,
+        transports: ['polling', 'websocket'],
+        reconnectionAttempts: 12,
+        reconnectionDelay: 800,
+        timeout: 20000,
+      });
+
+      const onConnect = () => setSocketConnected(true);
+      const onDisconnect = () => setSocketConnected(false);
+      const onConnectError = (err) => {
+        setSocketConnected(false);
+        console.warn(
+          '[socket] connect_error — realtime push may be unavailable; session ping will still sign out deleted users.',
+          err?.message || err
+        );
+      };
+
+      socket.on('connect', onConnect);
+      socket.on('disconnect', onDisconnect);
+      socket.on('connect_error', onConnectError);
+      socket.on('reconnect', onConnect);
+
+      socket.on('session:invalidate', (payload) => {
+        const reason = String(payload?.reason || '');
+        socket.disconnect();
+        let r = 'ended';
+        if (reason === 'account_suspended') r = 'suspended';
+        else if (reason === 'account_deleted') r = 'removed';
+        invalidateClientSession(r);
+      });
+
+      socket.on('admin:refresh', (payload) => {
+        if (isAdminUser()) scheduleAdminRefresh(payload);
+      });
+
+      if (socket.connected) setSocketConnected(true);
+
+      const runSessionPing = async () => {
+        if (document.visibilityState !== 'visible') return;
+        try {
+          const { status, message } = await authAPI.sessionPing();
+          if (status === 401 || status === 403) {
+            invalidateFromAuthFailure(status, message);
+          }
+        } catch {
+          /* network blip */
+        }
+      };
+      pingTimer = window.setInterval(runSessionPing, 10000);
+      onVis = () => {
+        if (document.visibilityState === 'visible') runSessionPing();
+      };
+      document.addEventListener('visibilitychange', onVis);
+      pingBoot = window.setTimeout(runSessionPing, 3000);
+    })();
 
     return () => {
+      cancelled = true;
       clearTimeout(pingBoot);
       clearInterval(pingTimer);
-      document.removeEventListener('visibilitychange', onVis);
+      if (onVis) document.removeEventListener('visibilitychange', onVis);
       clearTimeout(adminDebounce);
-      socket.off('reconnect', onConnect);
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('connect_error', onConnectError);
-      socket.off('admin:refresh');
-      socket.off('session:invalidate');
-      socket.close();
+      if (socket) {
+        socket.off('reconnect');
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('connect_error');
+        socket.off('admin:refresh');
+        socket.off('session:invalidate');
+        socket.close();
+      }
       setSocketConnected(false);
     };
   }, []);

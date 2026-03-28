@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fi';
 import { challengesAPI, profileAPI } from '../services/api';
 import { isAdminUser } from '../utils/authRole';
+import { signOutEverywhere, getParsedAuthUser } from '../utils/authStorage';
 import ThemeToggle from './ThemeToggle';
 
 /** How many leaderboard rows to show before "Show all" */
@@ -58,14 +59,13 @@ const Challenges = ({ theme = 'light', onToggleTheme }) => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await signOutEverywhere();
     navigate('/login', { replace: true });
     window.location.reload();
   };
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = getParsedAuthUser() || {};
 
   const leaderboardHasMore = leaderboard.length > LEADERBOARD_TOP_COUNT;
   const leaderboardVisible =

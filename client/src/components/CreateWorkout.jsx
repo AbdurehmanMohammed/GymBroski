@@ -15,6 +15,7 @@ import {
   convertWeightBetweenUnits,
   weightDisplayToStoredKg,
 } from '../utils/weightUnits';
+import { getParsedAuthUser, setAuthUserJson } from '../utils/authStorage';
 
 // AI suggests workout based on muscle group (rule-based, no external API)
 function getAIWorkout(muscleGroups) {
@@ -276,14 +277,14 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
 
       if (trainingDays.length > 0) {
         try {
-          const raw = JSON.parse(localStorage.getItem('user') || '{}');
+          const raw = getParsedAuthUser() || {};
           const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
           const merged = mergeScheduleForWorkout(existing, wid, trainingDays);
           const prof = await profileAPI.updateProfile({
             workoutSchedule: merged,
             timezone: getDeviceTimeZone(),
           });
-          localStorage.setItem('user', JSON.stringify({ ...raw, ...prof }));
+          setAuthUserJson({ ...raw, ...prof });
         } catch (schedErr) {
           console.error(schedErr);
           alert(

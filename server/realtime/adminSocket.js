@@ -2,6 +2,14 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { setAdminIo } from './adminHub.js';
+import { AUTH_COOKIE_NAME } from '../utils/authCookie.js';
+import { getCookieFromHeader } from '../utils/parseCookieHeader.js';
+
+function socketAllowedOrigins() {
+  const raw = process.env.CORS_ORIGIN;
+  if (!raw) return ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173'];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
 
 /**
  * App realtime: any valid JWT joins `user:<userId>`. Admins also join `admins`.
@@ -12,7 +20,7 @@ import { setAdminIo } from './adminHub.js';
 export function attachAdminSocket(httpServer) {
   const io = new Server(httpServer, {
     path: '/socket.io',
-    cors: { origin: true, credentials: true },
+    cors: { origin: socketAllowedOrigins(), credentials: true },
     transports: ['websocket', 'polling'],
   });
 
@@ -21,7 +29,10 @@ export function attachAdminSocket(httpServer) {
   io.use((socket, next) => {
     (async () => {
       try {
-        const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+        const cookieHeader = socket.handshake.headers?.cookie;
+        const fromCookie = getCookieFromHeader(cookieHeader, AUTH_COOKIE_NAME);
+        const token =
+          fromCookie || socket.handshake.auth?.token || socket.handshake.query?.token;
         if (!token || !process.env.JWT_SECRET) {
           next(new Error('Unauthorized'));
           return;

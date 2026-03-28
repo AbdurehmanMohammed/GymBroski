@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fi';
 import { workoutsAPI } from '../services/api';
 import { isAdminUser } from '../utils/authRole';
+import { getParsedAuthUser, signOutEverywhere } from '../utils/authStorage';
 import { useChatUnread } from '../hooks/useChatUnread';
 import CommunityChat from './CommunityChat';
 import ThemeToggle from './ThemeToggle';
@@ -38,7 +39,7 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
   const [exerciseVideoHelp, setExerciseVideoHelp] = useState(null);
   const chatUnread = useChatUnread();
   const navigate = useNavigate();
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = getParsedAuthUser();
 
   const closeMenu = () => setMenuOpen(false);
   const navTo = (path) => {
@@ -58,9 +59,7 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
     } catch (error) {
       console.error('Error fetching public workouts:', error);
       if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+        void signOutEverywhere().then(() => navigate('/login'));
       }
     } finally {
       setLoading(false);
@@ -110,9 +109,8 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
     });
   }, [publicWorkouts, searchQuery]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await signOutEverywhere();
     navigate('/login', { replace: true });
     window.location.reload();
   };

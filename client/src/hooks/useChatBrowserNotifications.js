@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { chatAPI } from '../services/api';
+import { getParsedAuthUser } from '../utils/authStorage';
 
 const POLL_INTERVAL = 20000;
 
@@ -14,7 +15,7 @@ export function useChatBrowserNotifications() {
   // One-time: ask the browser for notification permission after a real user gesture
   useEffect(() => {
     const onFirstGesture = () => {
-      if (!localStorage.getItem('token')) return;
+      if (!getParsedAuthUser()?.id) return;
       if (typeof Notification === 'undefined') return;
       if (Notification.permission !== 'default') return;
       Notification.requestPermission().catch(() => {});
@@ -25,7 +26,7 @@ export function useChatBrowserNotifications() {
 
   useEffect(() => {
     const tick = async () => {
-      if (!localStorage.getItem('token')) return;
+      if (!getParsedAuthUser()?.id) return;
       if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
       try {

@@ -1,10 +1,9 @@
-/** Whether the logged-in user has admin role (from localStorage, set at login). */
+import { getParsedAuthUser } from './authStorage';
+
+/** Whether the logged-in user has admin role (from session auth, set at login). */
 export function isAdminUser() {
   try {
-    const raw = localStorage.getItem('user');
-    if (!raw) return false;
-    const u = JSON.parse(raw);
-    return u?.role === 'admin';
+    return getParsedAuthUser()?.role === 'admin';
   } catch {
     return false;
   }

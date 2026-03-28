@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fi';
 import { workoutsAPI, workoutSessionsAPI } from '../services/api';
 import { isAdminUser } from '../utils/authRole';
+import { signOutEverywhere, getParsedAuthUser } from '../utils/authStorage';
 import ThemeToggle from './ThemeToggle';
 
 const Progress = ({ theme = 'light', onToggleTheme }) => {
@@ -56,9 +57,7 @@ const Progress = ({ theme = 'light', onToggleTheme }) => {
       setDaysThisMonth(0);
       setDaysThisYear(0);
       if (err.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+        void signOutEverywhere().then(() => navigate('/login'));
       }
     }
   };
@@ -93,21 +92,18 @@ const Progress = ({ theme = 'light', onToggleTheme }) => {
     } catch (error) {
       console.error('Error fetching workouts:', error);
       if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
+        void signOutEverywhere().then(() => navigate('/login'));
       }
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await signOutEverywhere();
     navigate('/login', { replace: true });
     window.location.reload();
   };
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = getParsedAuthUser() || {};
 
   return (
     <div className="dashboard">
