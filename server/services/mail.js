@@ -26,6 +26,11 @@ function hasSmtp() {
   return Boolean(process.env.SMTP_URL || process.env.SMTP_HOST);
 }
 
+/** True when workout/chat transactional email can be sent (Resend or SMTP + from address). */
+export function isMailConfigured() {
+  return Boolean((hasResend() && getEmailFrom()) || (hasSmtp() && getEmailFrom()));
+}
+
 let smtpTransporter = null;
 function getSmtpTransporter() {
   if (smtpTransporter) return smtpTransporter;

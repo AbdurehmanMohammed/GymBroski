@@ -2,7 +2,7 @@ import { randomInt } from 'crypto';
 import { DateTime } from 'luxon';
 import User from '../models/User.js';
 import WorkoutSplit from '../models/WorkoutSplit.js';
-import { sendMail } from '../services/mail.js';
+import { sendMail, isMailConfigured } from '../services/mail.js';
 
 const APP_NAME = process.env.APP_PUBLIC_NAME || 'GymBruski Website';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
@@ -287,9 +287,21 @@ function dbg(email, msg) {
   if (DEBUG && email) console.log('[workoutReminders]', email, msg);
 }
 
+let warnedMailNotConfigured = false;
+
 export async function runWorkoutReminderJob() {
   if (process.env.WORKOUT_REMINDER_CRON === 'false') {
     return { ran: false, reason: 'disabled' };
+  }
+
+  if (!isMailConfigured()) {
+    if (!warnedMailNotConfigured) {
+      warnedMailNotConfigured = true;
+      console.warn(
+        '[workoutReminders] Transactional email is OFF — reminders cannot send. On Render add RESEND_API_KEY and EMAIL_FROM (verified domain), or SMTP_* + EMAIL_FROM. Abstract Email is only for sign-up checks, not these mails.'
+      );
+    }
+    return { ran: true, checked: 0, sent: 0, reason: 'mail_not_configured' };
   }
 
   const users = await User.find({ emailWorkoutReminders: { $ne: false } })
