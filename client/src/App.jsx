@@ -7,6 +7,7 @@ import {
   Navigate,
   useNavigate,
   useSearchParams,
+  useLocation,
 } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI, profileAPI } from './services/api';
@@ -25,6 +26,183 @@ import ChatNotificationListener from './components/ChatNotificationListener';
 import SessionSocketBridge from './components/SessionSocketBridge';
 import Iridescence from './components/Iridescence';
 import DarkVeil from './components/DarkVeil';
+
+/** Subscribes to route changes so we re-read sessionStorage; remounts socket after login without full page reload (fixes mobile Safari after cross-site Set-Cookie). */
+function AuthAwareSocketBridge() {
+  useLocation();
+  const id = getParsedAuthUser()?.id;
+  return <SessionSocketBridge key={id != null && id !== '' ? String(id) : 'anon'} />;
+}
+
+/**
+ * Must live inside the router and call useLocation() so every navigation re-renders.
+ * Otherwise isAuthenticated() is frozen from App's last render and login → /dashboard still shows <Navigate to="/login" />.
+ */
+function AppRoutesBody({
+  theme,
+  onToggleTheme,
+  isLogin,
+  setIsLogin,
+  authHydrated,
+}) {
+  useLocation();
+
+  const isAuthenticated = () => authHydrated && !!getParsedAuthUser()?.id;
+  const isAdmin = () => {
+    try {
+      return getParsedAuthUser().role === 'admin';
+    } catch {
+      return false;
+    }
+  };
+
+  const authUserId = getParsedAuthUser()?.id;
+  const [, setProfileSync] = useState(0);
+  useEffect(() => {
+    if (!authHydrated || !authUserId) return;
+    profileAPI
+      .getProfile()
+      .then((data) => {
+        if (data?.role != null || data?.username != null) {
+          try {
+            const u = getParsedAuthUser();
+            if (data.role != null) u.role = data.role;
+            if (data.username != null) u.username = data.username;
+            setAuthUserJson(u);
+            setProfileSync((n) => n + 1);
+          } catch {
+            /* ignore */
+          }
+        }
+      })
+      .catch(() => {});
+  }, [authHydrated, authUserId]);
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          !isAuthenticated() ? (
+            <AuthPage
+              isLogin={isLogin}
+              setIsLogin={setIsLogin}
+              theme={theme}
+              onToggleTheme={onToggleTheme}
+            />
+          ) : (
+            <Navigate to="/dashboard" />
+          )
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          !isAuthenticated() ? (
+            <AuthPage
+              isLogin={false}
+              setIsLogin={setIsLogin}
+              theme={theme}
+              onToggleTheme={onToggleTheme}
+            />
+          ) : (
+            <Navigate to="/dashboard" />
+          )
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          isAuthenticated() ? (
+            <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/community"
+        element={
+          isAuthenticated() ? (
+            <PublicWorkouts theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/progress"
+        element={
+          isAuthenticated() ? (
+            <Progress theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/challenges"
+        element={
+          isAuthenticated() ? (
+            <Challenges theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/profile/:userId"
+        element={
+          isAuthenticated() ? (
+            <UserProfile theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          isAuthenticated() ? (
+            <Profile theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/calories"
+        element={
+          isAuthenticated() ? <Navigate to="/tracking?tab=calories" replace /> : <Navigate to="/login" />
+        }
+      />
+      <Route
+        path="/tracking"
+        element={
+          isAuthenticated() ? (
+            <Tracking theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          isAuthenticated() && isAdmin() ? (
+            <Admin theme={theme} onToggleTheme={onToggleTheme} />
+          ) : (
+            <Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />
+          )
+        }
+      />
+      <Route
+        path="/"
+        element={<Navigate to={isAuthenticated() ? '/dashboard' : '/login'} />}
+      />
+    </Routes>
+  );
+}
 
 // Login/Register component
 const SESSION_MESSAGES = {
@@ -79,7 +257,6 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
-          window.location.reload();
         }, 500);
       } else {
         const response = await authAPI.register({
@@ -90,7 +267,6 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
         setSuccess('Registration successful! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
-          window.location.reload();
         }, 500);
       }
     } catch (err) {
@@ -374,40 +550,6 @@ function App() {
       .finally(() => setAuthHydrated(true));
   }, []);
 
-  const isAuthenticated = () => {
-    return authHydrated && !!getParsedAuthUser()?.id;
-  };
-
-  const isAdmin = () => {
-    try {
-      return getParsedAuthUser().role === 'admin';
-    } catch {
-      return false;
-    }
-  };
-
-  /** Sync role from API (e.g. after ADMIN_EMAIL promotion) so /admin nav appears without re-login. */
-  const [, setProfileSync] = useState(0);
-  useEffect(() => {
-    if (!authHydrated || !getParsedAuthUser()?.id) return;
-    profileAPI
-      .getProfile()
-      .then((data) => {
-        if (data?.role != null || data?.username != null) {
-          try {
-            const u = getParsedAuthUser();
-            if (data.role != null) u.role = data.role;
-            if (data.username != null) u.username = data.username;
-            setAuthUserJson(u);
-            setProfileSync((n) => n + 1);
-          } catch {
-            /* ignore */
-          }
-        }
-      })
-      .catch(() => {});
-  }, [authHydrated]);
-
   if (!authHydrated) {
     return (
       <div
@@ -460,131 +602,14 @@ function App() {
         }
       >
         <ChatNotificationListener />
-        <SessionSocketBridge />
-        <Routes>
-        <Route 
-          path="/login" 
-          element={
-            !isAuthenticated() ? (
-              <AuthPage
-                isLogin={isLogin}
-                setIsLogin={setIsLogin}
-                theme={theme}
-                onToggleTheme={toggleTheme}
-              />
-            ) : (
-              <Navigate to="/dashboard" />
-            )
-          } 
+        <AuthAwareSocketBridge />
+        <AppRoutesBody
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          isLogin={isLogin}
+          setIsLogin={setIsLogin}
+          authHydrated={authHydrated}
         />
-        <Route 
-          path="/register" 
-          element={
-            !isAuthenticated() ? (
-              <AuthPage
-                isLogin={false}
-                setIsLogin={setIsLogin}
-                theme={theme}
-                onToggleTheme={toggleTheme}
-              />
-            ) : (
-              <Navigate to="/dashboard" />
-            )
-          } 
-        />
-        <Route 
-          path="/dashboard" 
-          element={
-            isAuthenticated() ? (
-              <Dashboard theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route 
-          path="/community" 
-          element={
-            isAuthenticated() ? (
-              <PublicWorkouts theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route 
-          path="/progress" 
-          element={
-            isAuthenticated() ? (
-              <Progress theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route 
-          path="/challenges" 
-          element={
-            isAuthenticated() ? (
-              <Challenges theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route 
-          path="/profile/:userId" 
-          element={
-            isAuthenticated() ? (
-              <UserProfile theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route 
-          path="/profile" 
-          element={
-            isAuthenticated() ? (
-              <Profile theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route
-          path="/calories"
-          element={
-            isAuthenticated() ? <Navigate to="/tracking?tab=calories" replace /> : <Navigate to="/login" />
-          }
-        />
-        <Route 
-          path="/tracking" 
-          element={
-            isAuthenticated() ? (
-              <Tracking theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } 
-        />
-        <Route
-          path="/admin"
-          element={
-            isAuthenticated() && isAdmin() ? (
-              <Admin theme={theme} onToggleTheme={toggleTheme} />
-            ) : (
-              <Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />
-            )
-          }
-        />
-        <Route 
-          path="/" 
-          element={
-            <Navigate to={isAuthenticated() ? "/dashboard" : "/login"} />
-          } 
-        />
-        </Routes>
       </div>
     </AppRouter>
   );
