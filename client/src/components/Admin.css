@@ -476,6 +476,122 @@
   align-items: center;
 }
 
+/* User directory — desktop: one “Contact” column; readable email (no break-all) */
+.admin-console__table-contact {
+  min-width: 200px;
+  max-width: min(360px, 34vw);
+  vertical-align: middle;
+}
+
+.admin-console__contact-email {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.admin-console__contact-user {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+/* User directory — mobile: compact cards (full width, short rows) */
+.admin-console__user-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.admin-console__user-card {
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: var(--ac-panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.admin-console[data-bs-theme='light'] .admin-console__user-card,
+.admin-console.admin-console--light .admin-console__user-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.admin-console__user-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.admin-console__user-card-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.admin-console__user-card-name {
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--ac-text);
+}
+
+.admin-console__user-card-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-console__user-card-email {
+  display: block;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  color: var(--ac-teal);
+  text-decoration: none;
+}
+
+.admin-console__user-card-email:hover {
+  text-decoration: underline;
+}
+
+.admin-console__user-card-username {
+  margin-top: 2px;
+  margin-bottom: 10px;
+}
+
+.admin-console__user-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.admin-console__user-card-points {
+  min-width: 0;
+}
+
+.admin-console__user-card-actions {
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.admin-console__user-card-actions .btn {
+  min-height: 36px;
+}
+
+.admin-console[data-bs-theme='light'] .admin-console__user-card-actions,
+.admin-console.admin-console--light .admin-console__user-card-actions {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
 .admin-console__link {
   color: var(--ac-teal);
   font-size: 12px;

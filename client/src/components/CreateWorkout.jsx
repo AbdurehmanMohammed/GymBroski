@@ -518,7 +518,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                 <button
                   key={m.id}
                   type="button"
-                  className={`mode-tab ${mode === m.id ? 'active' : ''}`}
+                  className={`mode-tab mode-tab--${m.id} ${mode === m.id ? 'active' : ''}`}
                   onClick={() => setMode(m.id)}
                 >
                   <m.icon /> {m.label}

@@ -5705,6 +5705,23 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   padding: 0 0 14px;
 }
 
+/* Add exercises panel: 2×2 mode grid on phones — uses horizontal space, more room for library list */
+@media (max-width: 768px) {
+  .create-workout-source-panel {
+    padding: 12px;
+  }
+
+  .create-workout-source-heading {
+    font-size: 14px;
+  }
+
+  .create-workout-source-hint {
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
 .library-section--in-panel,
 .template-section--in-panel,
 .ai-section--in-panel {
@@ -6083,6 +6100,74 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   border-color: transparent;
   color: white;
   box-shadow: 0 10px 28px -4px rgba(102, 126, 234, 0.55);
+}
+
+/*
+ * Add exercises (Create Workout panel): must come AFTER `.create-mode-tabs { display: flex }` above
+ * so `display: grid` wins. Layout matches mobile sketch — full-width Library, Templates|AI, full Manual.
+ */
+@media (max-width: 768px) {
+  .create-mode-tabs.create-mode-tabs--in-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 0 10px;
+  }
+
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--library,
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--manual {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 14px;
+    text-align: center;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--template,
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--ai {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    min-height: 64px;
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--library svg,
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--manual svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--template svg,
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab--ai svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab:hover {
+    transform: none;
+  }
+
+  .create-mode-tabs.create-mode-tabs--in-panel .mode-tab.active {
+    box-shadow: 0 6px 18px -4px rgba(102, 126, 234, 0.5);
+  }
 }
 
 .library-section,

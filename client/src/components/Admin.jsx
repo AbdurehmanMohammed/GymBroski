@@ -430,6 +430,112 @@ const Admin = ({ theme = 'light', onToggleTheme }) => {
     }
   })();
 
+  const renderDirectoryPoints = (u) =>
+    pointsEdit?.id === u.id ? (
+      <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          type="number"
+          min={0}
+          value={pointsEdit.value}
+          onChange={(e) =>
+            setPointsEdit((prev) => (prev ? { ...prev, value: e.target.value } : null))
+          }
+          style={{ width: 72, padding: 4, borderRadius: 6 }}
+        />
+        <button type="button" className="btn btn-primary btn-sm py-0 px-2" onClick={() => handleSavePoints(u.id)}>
+          Save
+        </button>
+        <button type="button" className="btn btn-outline-secondary btn-sm py-0 px-2" onClick={() => setPointsEdit(null)}>
+          ✕
+        </button>
+      </span>
+    ) : (
+      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        <span style={{ fontFamily: 'var(--ac-mono)' }}>{u.points ?? 0}</span>
+        <button
+          type="button"
+          className="btn btn-outline-secondary btn-sm py-0 px-2"
+          disabled={busyId === u.id}
+          onClick={() => setPointsEdit({ id: u.id, value: String(u.points ?? 0) })}
+        >
+          Edit
+        </button>
+      </span>
+    );
+
+  const renderDirectoryActions = (u) => (
+    <div className="admin-console__actions d-flex flex-wrap gap-1 align-items-center">
+      <button
+        type="button"
+        className="btn btn-outline-primary btn-sm py-0 px-2"
+        disabled={busyId === u.id}
+        onClick={() => setManageUserId(u.id)}
+      >
+        <FiEdit3 size={12} className="me-1" style={{ verticalAlign: 'middle' }} />
+        Manage
+      </button>
+      <Link className="btn btn-link btn-sm p-0 align-baseline text-decoration-none" to={`/profile/${u.id}`}>
+        Profile <FiExternalLink size={12} />
+      </Link>
+      {!u.isPlatformAdmin && (
+        <>
+          {u.suspended ? (
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm py-0 px-2"
+              disabled={busyId === u.id}
+              onClick={() => handleSuspend(u.id, false)}
+            >
+              <FiSlash size={12} /> Unsuspend
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-outline-danger btn-sm py-0 px-2"
+              disabled={busyId === u.id || String(u.id) === String(currentUserId)}
+              onClick={() => handleSuspend(u.id, true)}
+            >
+              Suspend
+            </button>
+          )}
+        </>
+      )}
+      {u.isPlatformAdmin ? (
+        <span style={{ fontSize: 11, color: 'var(--ac-muted)' }} title="Platform admin">
+          —
+        </span>
+      ) : u.role !== 'admin' ? (
+        <button
+          type="button"
+          className="btn btn-outline-secondary btn-sm py-0 px-2"
+          disabled={busyId === u.id}
+          onClick={() => handleRole(u.id, 'admin')}
+        >
+          Make admin
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-outline-secondary btn-sm py-0 px-2"
+          disabled={busyId === u.id}
+          onClick={() => handleRole(u.id, 'user')}
+        >
+          Demote
+        </button>
+      )}
+      <button
+        type="button"
+        className="btn btn-outline-danger btn-sm py-0 px-2"
+        disabled={
+          busyId === u.id || String(u.id) === String(currentUserId) || u.isPlatformAdmin
+        }
+        onClick={() => handleDelete(u.id, u.email)}
+      >
+        <FiTrash2 size={12} /> Delete
+      </button>
+    </div>
+  );
+
   const RailBtn = ({ path, icon: Icon, active, label }) => (
     <button
       type="button"
@@ -653,158 +759,108 @@ const Admin = ({ theme = 'light', onToggleTheme }) => {
                 <p className="text-secondary small">Loading directory…</p>
               ) : (
                 <div className="card border-0 shadow-sm admin-console__table-card">
-                  <div className="table-responsive">
-                    <table className="table table-sm table-hover align-middle mb-0 admin-console__table">
-                  <thead>
-                    <tr>
-                      <th>Email</th>
-                      <th>User</th>
-                      <th>Name</th>
-                      <th>Joined</th>
-                      <th>Role</th>
-                      <th>Status</th>
-                      <th>Points</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((u) => (
-                      <tr key={u.id}>
-                        <td style={{ wordBreak: 'break-all', maxWidth: 200 }}>{u.email}</td>
-                        <td style={{ fontFamily: 'var(--ac-mono)', fontSize: 12 }}>{u.username || '—'}</td>
-                        <td>{u.name}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{formatJoined(u.createdAt)}</td>
-                        <td>
-                          <span
-                            className={`admin-console__badge ${
-                              u.role === 'admin' ? 'admin-console__badge--admin' : 'admin-console__badge--user'
-                            }`}
-                          >
-                            {u.role}
-                          </span>
-                        </td>
-                        <td>
-                          {u.suspended ? (
-                            <span className="admin-console__badge admin-console__badge--suspended">blocked</span>
-                          ) : (
-                            <span style={{ color: 'var(--ac-muted)', fontSize: 12 }}>ok</span>
-                          )}
-                        </td>
-                        <td>
-                          {pointsEdit?.id === u.id ? (
-                            <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                              <input
-                                type="number"
-                                min={0}
-                                value={pointsEdit.value}
-                                onChange={(e) =>
-                                  setPointsEdit((prev) => (prev ? { ...prev, value: e.target.value } : null))
-                                }
-                                style={{ width: 72, padding: 4, borderRadius: 6 }}
-                              />
-                              <button type="button" className="btn btn-primary btn-sm py-0 px-2" onClick={() => handleSavePoints(u.id)}>
-                                Save
-                              </button>
-                              <button type="button" className="btn btn-outline-secondary btn-sm py-0 px-2" onClick={() => setPointsEdit(null)}>
-                                ✕
-                              </button>
-                            </span>
-                          ) : (
-                            <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-                              <span style={{ fontFamily: 'var(--ac-mono)' }}>{u.points ?? 0}</span>
-                              <button
-                                type="button"
-                                className="btn btn-outline-secondary btn-sm py-0 px-2"
-                                disabled={busyId === u.id}
-                                onClick={() => setPointsEdit({ id: u.id, value: String(u.points ?? 0) })}
-                              >
-                                Edit
-                              </button>
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <div className="admin-console__actions d-flex flex-wrap gap-1 align-items-center">
-                            <button
-                              type="button"
-                              className="btn btn-outline-primary btn-sm py-0 px-2"
-                              disabled={busyId === u.id}
-                              onClick={() => setManageUserId(u.id)}
-                            >
-                              <FiEdit3 size={12} className="me-1" style={{ verticalAlign: 'middle' }} />
-                              Manage
-                            </button>
-                            <Link className="btn btn-link btn-sm p-0 align-baseline text-decoration-none" to={`/profile/${u.id}`}>
-                              Profile <FiExternalLink size={12} />
-                            </Link>
-                            {!u.isPlatformAdmin && (
-                              <>
+                  {!filteredUsers.length ? (
+                    <p className="text-center text-secondary small py-4 mb-0 px-3">No rows match.</p>
+                  ) : (
+                    <>
+                      <div className="admin-console__user-cards d-lg-none" role="list">
+                        {filteredUsers.map((u) => (
+                          <article key={u.id} className="admin-console__user-card" role="listitem">
+                            <div className="admin-console__user-card-head">
+                              <div className="admin-console__user-card-identity">
+                                <span className="admin-console__user-card-name">{u.name || '—'}</span>
+                                <span
+                                  className={`admin-console__badge ${
+                                    u.role === 'admin' ? 'admin-console__badge--admin' : 'admin-console__badge--user'
+                                  }`}
+                                >
+                                  {u.role}
+                                </span>
                                 {u.suspended ? (
-                                  <button
-                                    type="button"
-                                    className="btn btn-outline-secondary btn-sm py-0 px-2"
-                                    disabled={busyId === u.id}
-                                    onClick={() => handleSuspend(u.id, false)}
-                                  >
-                                    <FiSlash size={12} /> Unsuspend
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="btn btn-outline-danger btn-sm py-0 px-2"
-                                    disabled={busyId === u.id || String(u.id) === String(currentUserId)}
-                                    onClick={() => handleSuspend(u.id, true)}
-                                  >
-                                    Suspend
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            {u.isPlatformAdmin ? (
-                              <span style={{ fontSize: 11, color: 'var(--ac-muted)' }} title="Platform admin">
-                                —
+                                  <span className="admin-console__badge admin-console__badge--suspended">blocked</span>
+                                ) : null}
+                              </div>
+                              <span className="admin-console__user-card-meta text-secondary small">
+                                {formatJoined(u.createdAt)}
                               </span>
-                            ) : u.role !== 'admin' ? (
-                              <button
-                                type="button"
-                                className="btn btn-outline-secondary btn-sm py-0 px-2"
-                                disabled={busyId === u.id}
-                                onClick={() => handleRole(u.id, 'admin')}
-                              >
-                                Make admin
-                              </button>
+                            </div>
+                            {u.email ? (
+                              <a href={`mailto:${u.email}`} className="admin-console__user-card-email" title={u.email}>
+                                {u.email}
+                              </a>
                             ) : (
-                              <button
-                                type="button"
-                                className="btn btn-outline-secondary btn-sm py-0 px-2"
-                                disabled={busyId === u.id}
-                                onClick={() => handleRole(u.id, 'user')}
-                              >
-                                Demote
-                              </button>
+                              <span className="admin-console__user-card-email text-secondary">—</span>
                             )}
-                            <button
-                              type="button"
-                              className="btn btn-outline-danger btn-sm py-0 px-2"
-                              disabled={
-                                busyId === u.id ||
-                                String(u.id) === String(currentUserId) ||
-                                u.isPlatformAdmin
-                              }
-                              onClick={() => handleDelete(u.id, u.email)}
-                            >
-                              <FiTrash2 size={12} /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                    {!filteredUsers.length && (
-                      <p className="text-center text-secondary small py-4 mb-0">No rows match.</p>
-                    )}
-                  </div>
+                            {u.username ? (
+                              <div className="admin-console__user-card-username font-monospace small text-secondary">
+                                @{u.username}
+                              </div>
+                            ) : null}
+                            <div className="admin-console__user-card-row">
+                              <span className="text-secondary small">Points</span>
+                              <div className="admin-console__user-card-points">{renderDirectoryPoints(u)}</div>
+                            </div>
+                            <div className="admin-console__user-card-actions">{renderDirectoryActions(u)}</div>
+                          </article>
+                        ))}
+                      </div>
+                      <div className="d-none d-lg-block">
+                        <div className="table-responsive">
+                          <table className="table table-sm table-hover align-middle mb-0 admin-console__table">
+                            <thead>
+                              <tr>
+                                <th>Contact</th>
+                                <th>Name</th>
+                                <th>Joined</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Points</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredUsers.map((u) => (
+                                <tr key={u.id}>
+                                  <td className="admin-console__table-contact">
+                                    <div className="admin-console__contact-email" title={u.email}>
+                                      {u.email}
+                                    </div>
+                                    {u.username ? (
+                                      <div className="admin-console__contact-user text-secondary small font-monospace">
+                                        @{u.username}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                  <td>{u.name}</td>
+                                  <td className="text-nowrap">{formatJoined(u.createdAt)}</td>
+                                  <td>
+                                    <span
+                                      className={`admin-console__badge ${
+                                        u.role === 'admin' ? 'admin-console__badge--admin' : 'admin-console__badge--user'
+                                      }`}
+                                    >
+                                      {u.role}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {u.suspended ? (
+                                      <span className="admin-console__badge admin-console__badge--suspended">
+                                        blocked
+                                      </span>
+                                    ) : (
+                                      <span className="text-secondary small">ok</span>
+                                    )}
+                                  </td>
+                                  <td>{renderDirectoryPoints(u)}</td>
+                                  <td>{renderDirectoryActions(u)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

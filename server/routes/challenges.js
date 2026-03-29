@@ -116,7 +116,11 @@ async function getCategoryLeaders() {
 router.get('/leaderboard', authenticateToken, async (req, res) => {
   try {
     const [users, categoryLeaders] = await Promise.all([
-      User.find().select('name profilePhoto points').sort({ points: -1 }).limit(50).lean(),
+      User.find({ role: { $ne: 'admin' } })
+        .select('name profilePhoto points')
+        .sort({ points: -1 })
+        .limit(50)
+        .lean(),
       getCategoryLeaders()
     ]);
 

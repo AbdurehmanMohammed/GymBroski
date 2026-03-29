@@ -5,16 +5,22 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+/** Non-admins only — admins are omitted from the public challenge leaderboard. */
+const LEADERBOARD_ROLE_FILTER = { role: { $ne: 'admin' } };
+
 /** Rank by challenge points: 1 = highest. Ties share the same rank (competition ranking). */
-async function getLeaderboardMetaForPoints(points) {
+async function getLeaderboardMetaForPoints(points, subjectRole) {
+  if (subjectRole === 'admin') {
+    return { leaderboardRank: null, leaderboardTotalUsers: null };
+  }
   const pts = points ?? 0;
   const [higherPointsCount, leaderboardTotalUsers] = await Promise.all([
-    User.countDocuments({ points: { $gt: pts } }),
-    User.countDocuments({})
+    User.countDocuments({ ...LEADERBOARD_ROLE_FILTER, points: { $gt: pts } }),
+    User.countDocuments(LEADERBOARD_ROLE_FILTER),
   ]);
   return {
     leaderboardRank: higherPointsCount + 1,
-    leaderboardTotalUsers
+    leaderboardTotalUsers,
   };
 }
 
@@ -54,7 +60,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     const pts = user.points ?? 0;
-    const lb = await getLeaderboardMetaForPoints(pts);
+    const lb = await getLeaderboardMetaForPoints(pts, user.role);
 
     res.json({
       success: true,
@@ -152,7 +158,7 @@ router.put('/', authenticateToken, async (req, res) => {
       });
     }
 
-    const lbAfter = await getLeaderboardMetaForPoints(user.points ?? 0);
+    const lbAfter = await getLeaderboardMetaForPoints(user.points ?? 0, user.role);
 
     res.json({
       success: true,
