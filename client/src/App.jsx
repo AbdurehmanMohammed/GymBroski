@@ -282,8 +282,13 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
               onChange={(e) => setRememberMe(e.target.checked)}
               style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#667eea' }}
             />
-            Keep me signed in for 90 days
+            Remember me
           </label>
+          {rememberMe && (
+            <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', margin: '-8px 0 16px 28px' }}>
+              Stays signed in up to 90 days on this device.
+            </p>
+          )}
           {!rememberMe && (
             <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', margin: '-8px 0 16px 28px' }}>
               Session ends after 7 days — you’ll need email & password again.
