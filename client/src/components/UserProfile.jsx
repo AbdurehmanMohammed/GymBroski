@@ -19,7 +19,6 @@ import {
 } from 'react-icons/fi';
 import { profileAPI, workoutsAPI, trackingAPI } from '../services/api';
 import { isAdminUser } from '../utils/authRole';
-import { signOutEverywhere } from '../utils/authStorage';
 import ThemeToggle from './ThemeToggle';
 import { resolveExerciseVideoUrl } from '../utils/exerciseDemoVideo';
 import { ExerciseVideoInfoIcon, ExerciseVideoHelpModal } from './ExerciseVideoHelp';
@@ -103,8 +102,9 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
     }
   };
 
-  const handleLogout = async () => {
-    await signOutEverywhere();
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login', { replace: true });
     window.location.reload();
   };

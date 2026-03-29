@@ -27,7 +27,6 @@ import {
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { adminAPI } from '../services/api';
 import { isAdminUser } from '../utils/authRole';
-import { signOutEverywhere, getParsedAuthUser } from '../utils/authStorage';
 import { ADMIN_REFRESH_EVENT } from '../constants/socketEvents';
 import { subscribeSocketConnected } from '../utils/socketLiveStore';
 import './Admin.css';
@@ -339,8 +338,9 @@ const Admin = ({ theme = 'light', onToggleTheme }) => {
     }
   };
 
-  const handleLogout = async () => {
-    await signOutEverywhere();
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login', { replace: true });
     window.location.reload();
   };
@@ -424,7 +424,7 @@ const Admin = ({ theme = 'light', onToggleTheme }) => {
 
   const currentUserId = (() => {
     try {
-      return getParsedAuthUser()?.id ?? null;
+      return JSON.parse(localStorage.getItem('user') || '{}').id;
     } catch {
       return null;
     }

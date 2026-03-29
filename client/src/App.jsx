@@ -5,14 +5,10 @@ import {
   Routes,
   Route,
   Navigate,
-  useNavigate,
   useSearchParams,
-  useLocation,
 } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI, profileAPI } from './services/api';
-import { getParsedAuthUser, setAuthUserJson, setAuthUserJsonAndNotify, clearAuthSession } from './utils/authStorage';
-import { AUTH_SESSION_UPDATED } from './utils/authSessionEvents';
 import BrandLogo from './components/BrandLogo';
 import Admin from './components/Admin';
 import Dashboard from './components/Dashboard';
@@ -28,189 +24,6 @@ import SessionSocketBridge from './components/SessionSocketBridge';
 import Iridescence from './components/Iridescence';
 import DarkVeil from './components/DarkVeil';
 
-/** Subscribes to route changes so we re-read sessionStorage; remounts socket after login without full page reload (fixes mobile Safari after cross-site Set-Cookie). */
-function AuthAwareSocketBridge() {
-  useLocation();
-  const id = getParsedAuthUser()?.id;
-  return <SessionSocketBridge key={id != null && id !== '' ? String(id) : 'anon'} />;
-}
-
-/**
- * Must live inside the router and call useLocation() so every navigation re-renders.
- * Otherwise isAuthenticated() is frozen from App's last render and login → /dashboard still shows <Navigate to="/login" />.
- */
-function AppRoutesBody({
-  theme,
-  onToggleTheme,
-  isLogin,
-  setIsLogin,
-  authHydrated,
-}) {
-  useLocation();
-  const [, setSessionEpoch] = useState(0);
-  useEffect(() => {
-    const bump = () => setSessionEpoch((e) => e + 1);
-    window.addEventListener(AUTH_SESSION_UPDATED, bump);
-    return () => window.removeEventListener(AUTH_SESSION_UPDATED, bump);
-  }, []);
-
-  const isAuthenticated = () => authHydrated && !!getParsedAuthUser()?.id;
-  const isAdmin = () => {
-    try {
-      return getParsedAuthUser().role === 'admin';
-    } catch {
-      return false;
-    }
-  };
-
-  const authUserId = getParsedAuthUser()?.id;
-  const [, setProfileSync] = useState(0);
-  useEffect(() => {
-    if (!authHydrated || !authUserId) return;
-    profileAPI
-      .getProfile()
-      .then((data) => {
-        if (data?.role != null || data?.username != null) {
-          try {
-            const u = getParsedAuthUser();
-            if (data.role != null) u.role = data.role;
-            if (data.username != null) u.username = data.username;
-            setAuthUserJson(u);
-            setProfileSync((n) => n + 1);
-          } catch {
-            /* ignore */
-          }
-        }
-      })
-      .catch(() => {});
-  }, [authHydrated, authUserId]);
-
-  return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          !isAuthenticated() ? (
-            <AuthPage
-              isLogin={isLogin}
-              setIsLogin={setIsLogin}
-              theme={theme}
-              onToggleTheme={onToggleTheme}
-            />
-          ) : (
-            <Navigate to="/dashboard" />
-          )
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          !isAuthenticated() ? (
-            <AuthPage
-              isLogin={false}
-              setIsLogin={setIsLogin}
-              theme={theme}
-              onToggleTheme={onToggleTheme}
-            />
-          ) : (
-            <Navigate to="/dashboard" />
-          )
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          isAuthenticated() ? (
-            <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/community"
-        element={
-          isAuthenticated() ? (
-            <PublicWorkouts theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/progress"
-        element={
-          isAuthenticated() ? (
-            <Progress theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/challenges"
-        element={
-          isAuthenticated() ? (
-            <Challenges theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/profile/:userId"
-        element={
-          isAuthenticated() ? (
-            <UserProfile theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          isAuthenticated() ? (
-            <Profile theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/calories"
-        element={
-          isAuthenticated() ? <Navigate to="/tracking?tab=calories" replace /> : <Navigate to="/login" />
-        }
-      />
-      <Route
-        path="/tracking"
-        element={
-          isAuthenticated() ? (
-            <Tracking theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          isAuthenticated() && isAdmin() ? (
-            <Admin theme={theme} onToggleTheme={onToggleTheme} />
-          ) : (
-            <Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />
-          )
-        }
-      />
-      <Route
-        path="/"
-        element={<Navigate to={isAuthenticated() ? '/dashboard' : '/login'} />}
-      />
-    </Routes>
-  );
-}
-
 // Login/Register component
 const SESSION_MESSAGES = {
   removed: 'This account was removed. You can sign in with another account if you have one.',
@@ -218,8 +31,15 @@ const SESSION_MESSAGES = {
   ended: 'Your session was ended. Please sign in again.',
 };
 
+function isLikelyJwt(token) {
+  return (
+    typeof token === 'string' &&
+    token.length > 30 &&
+    token.split('.').length === 3
+  );
+}
+
 const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionNotice = searchParams.get('session');
   const [formData, setFormData] = useState({
@@ -260,21 +80,31 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           password: formData.password,
           rememberMe
         });
-        setAuthUserJsonAndNotify(response.user);
+        if (!isLikelyJwt(response?.token) || !response?.user || typeof response.user !== 'object') {
+          setError('Invalid response from server. Please try again.');
+          return;
+        }
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
         setSuccess('Login successful! Redirecting...');
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 500);
+        window.setTimeout(() => {
+          window.location.replace(`${window.location.origin}/dashboard`);
+        }, 150);
       } else {
         const response = await authAPI.register({
           ...formData,
           rememberMe
         });
-        setAuthUserJsonAndNotify(response.user);
+        if (!isLikelyJwt(response?.token) || !response?.user || typeof response.user !== 'object') {
+          setError('Invalid response from server. Please try again.');
+          return;
+        }
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
         setSuccess('Registration successful! Redirecting...');
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-        }, 500);
+        window.setTimeout(() => {
+          window.location.replace(`${window.location.origin}/dashboard`);
+        }, 150);
       }
     } catch (err) {
       console.error('Full error:', err);
@@ -465,13 +295,8 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
               onChange={(e) => setRememberMe(e.target.checked)}
               style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#667eea' }}
             />
-            Remember me
+            Keep me signed in for 90 days
           </label>
-          {rememberMe && (
-            <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', margin: '-8px 0 16px 28px' }}>
-              Stays signed in up to 90 days on this device.
-            </p>
-          )}
           {!rememberMe && (
             <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', margin: '-8px 0 16px 28px' }}>
               Session ends after 7 days — you’ll need email & password again.
@@ -520,7 +345,6 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
 
 // Main App Component
 function App() {
-  const [authHydrated, setAuthHydrated] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
@@ -545,34 +369,40 @@ function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  useEffect(() => {
-    authAPI
-      .me()
-      .then((data) => {
-        if (data?.user) setAuthUserJson(data.user);
-      })
-      .catch((err) => {
-        if (err?.status === 401 || err?.status === 403) clearAuthSession();
-      })
-      .finally(() => setAuthHydrated(true));
-  }, []);
+  const isAuthenticated = () => {
+    return !!localStorage.getItem('token');
+  };
 
-  if (!authHydrated) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: theme === 'dark' ? '#020617' : '#f8fafc',
-          color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
-        }}
-      >
-        Loading…
-      </div>
-    );
-  }
+  const isAdmin = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      return u.role === 'admin';
+    } catch {
+      return false;
+    }
+  };
+
+  /** Sync role from API (e.g. after ADMIN_EMAIL promotion) so /admin nav appears without re-login. */
+  const [, setProfileSync] = useState(0);
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return;
+    profileAPI
+      .getProfile()
+      .then((data) => {
+        if (data?.role != null || data?.username != null) {
+          try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            if (data.role != null) u.role = data.role;
+            if (data.username != null) u.username = data.username;
+            localStorage.setItem('user', JSON.stringify(u));
+            setProfileSync((n) => n + 1);
+          } catch {
+            /* ignore */
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <AppRouter>
@@ -609,14 +439,131 @@ function App() {
         }
       >
         <ChatNotificationListener />
-        <AuthAwareSocketBridge />
-        <AppRoutesBody
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          isLogin={isLogin}
-          setIsLogin={setIsLogin}
-          authHydrated={authHydrated}
+        <SessionSocketBridge />
+        <Routes>
+        <Route 
+          path="/login" 
+          element={
+            !isAuthenticated() ? (
+              <AuthPage
+                isLogin={isLogin}
+                setIsLogin={setIsLogin}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+              />
+            ) : (
+              <Navigate to="/dashboard" />
+            )
+          } 
         />
+        <Route 
+          path="/register" 
+          element={
+            !isAuthenticated() ? (
+              <AuthPage
+                isLogin={false}
+                setIsLogin={setIsLogin}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+              />
+            ) : (
+              <Navigate to="/dashboard" />
+            )
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            isAuthenticated() ? (
+              <Dashboard theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route 
+          path="/community" 
+          element={
+            isAuthenticated() ? (
+              <PublicWorkouts theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route 
+          path="/progress" 
+          element={
+            isAuthenticated() ? (
+              <Progress theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route 
+          path="/challenges" 
+          element={
+            isAuthenticated() ? (
+              <Challenges theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route 
+          path="/profile/:userId" 
+          element={
+            isAuthenticated() ? (
+              <UserProfile theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            isAuthenticated() ? (
+              <Profile theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route
+          path="/calories"
+          element={
+            isAuthenticated() ? <Navigate to="/tracking?tab=calories" replace /> : <Navigate to="/login" />
+          }
+        />
+        <Route 
+          path="/tracking" 
+          element={
+            isAuthenticated() ? (
+              <Tracking theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } 
+        />
+        <Route
+          path="/admin"
+          element={
+            isAuthenticated() && isAdmin() ? (
+              <Admin theme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />
+            )
+          }
+        />
+        <Route 
+          path="/" 
+          element={
+            <Navigate to={isAuthenticated() ? "/dashboard" : "/login"} />
+          } 
+        />
+        </Routes>
       </div>
     </AppRouter>
   );

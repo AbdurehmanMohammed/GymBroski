@@ -1,11 +1,9 @@
-import { signOutEverywhere } from './authStorage';
-
 /** Hard redirect to login — same outcome as Socket.io `session:invalidate`. */
 export function invalidateClientSession(reason = 'ended') {
   const q = reason === 'suspended' ? 'suspended' : reason === 'removed' ? 'removed' : 'ended';
-  void signOutEverywhere().finally(() => {
-    window.location.replace(`/login?session=${q}`);
-  });
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.replace(`/login?session=${q}`);
 }
 
 /**
@@ -19,6 +17,8 @@ export function invalidateFromAuthFailure(status, message = '') {
     invalidateClientSession('suspended');
     return true;
   }
+  // 403 is used for many non-auth failures at the edge; only sign out when the API sent a real message.
+  if (status === 403 && !String(message).trim()) return false;
   invalidateClientSession('removed');
   return true;
 }

@@ -1,25 +1,10 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { AUTH_COOKIE_NAME } from '../utils/authCookie.js';
-
-function getBearerToken(req) {
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7).trim() || null;
-  }
-  return null;
-}
-
-/** Prefer httpOnly cookie; still accept Authorization: Bearer for tools/scripts. */
-export function getJwtFromRequest(req) {
-  const fromCookie = req.cookies?.[AUTH_COOKIE_NAME];
-  if (fromCookie) return String(fromCookie);
-  return getBearerToken(req);
-}
 
 export const authenticateToken = (req, res, next) => {
   try {
-    const token = getJwtFromRequest(req);
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
       return res.status(401).json({ 

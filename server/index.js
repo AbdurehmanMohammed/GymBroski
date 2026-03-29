@@ -2,7 +2,6 @@ import express from 'express';
 import http from 'http';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -38,22 +37,7 @@ import { attachAdminSocket } from './realtime/adminSocket.js';
 const app = express();
 const httpServer = http.createServer(app);
 
-const corsAllowedOrigins = (() => {
-  const raw = process.env.CORS_ORIGIN;
-  if (!raw) return ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173'];
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
-})();
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || corsAllowedOrigins.includes(origin)) callback(null, true);
-      else callback(null, false);
-    },
-    credentials: true,
-  })
-);
-app.use(cookieParser());
+app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 

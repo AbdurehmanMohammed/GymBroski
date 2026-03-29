@@ -1,20 +1,18 @@
 /** Dev: `/api` is proxied by Vite (vite.config.js). Production: set VITE_API_URL on Render (e.g. https://your-api.onrender.com/api). */
-export const API_URL = import.meta.env.DEV
+const API_URL = import.meta.env.DEV
   ? '/api'
   : String(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
-function apiFetch(url, options = {}) {
-  return fetch(url, {
-    ...options,
-    credentials: 'include',
-    headers: options.headers ? { ...options.headers } : undefined,
-  });
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  console.warn(
+    '[api] VITE_API_URL was not set at build time; API calls default to localhost and will fail on real phones. Set VITE_API_URL on your static host build.'
+  );
 }
 
 // Auth API
 export const authAPI = {
   register: async (userData) => {
-    const response = await apiFetch(`${API_URL}/auth/register`, {
+    const response = await fetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,7 +27,7 @@ export const authAPI = {
   },
 
   login: async (credentials) => {
-    const response = await apiFetch(`${API_URL}/auth/login`, {
+    const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,52 +43,59 @@ export const authAPI = {
 
   /**
    * Validates session with the API (works when Socket.io cannot reach the backend host).
-   * status 200 = ok; 401/403 = sign out.
+   * Only `shouldInvalidate` true when we got a JSON auth error from our API — not a generic CDN/WAF 403 page.
    */
   sessionPing: async () => {
-    const response = await apiFetch(`${API_URL}/auth/session`);
-    const data = await response.json().catch(() => ({}));
-    return { status: response.status, message: data.message || '' };
-  },
-
-  /** Current user when httpOnly session cookie is valid (e.g. new tab). */
-  me: async () => {
-    const response = await apiFetch(`${API_URL}/auth/me`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const err = new Error(data.message || 'Not authenticated');
-      err.status = response.status;
-      throw err;
+    const token = localStorage.getItem('token');
+    if (!token) return { status: 204, message: '', shouldInvalidate: false };
+    const response = await fetch(`${API_URL}/auth/session`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      return { status: response.status, message: '', shouldInvalidate: false };
     }
-    return data;
-  },
-
-  logout: async () => {
-    await apiFetch(`${API_URL}/auth/logout`, { method: 'POST' });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      return { status: response.status, message: '', shouldInvalidate: false };
+    }
+    const msg = typeof data.message === 'string' ? data.message : '';
+    const shouldInvalidate =
+      (response.status === 401 || response.status === 403) &&
+      data.success === false &&
+      msg.trim().length > 0;
+    return { status: response.status, message: msg, shouldInvalidate };
   },
 };
 
 // Workouts API
 export const workoutsAPI = {
   getAll: async () => {
-    const response = await apiFetch(`${API_URL}/workouts`, {
+    const response = await fetch(`${API_URL}/workouts`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
     });
     if (!response.ok) throw new Error('Failed to fetch workouts');
     return response.json();
   },
 
   getById: async (id) => {
-    const response = await apiFetch(`${API_URL}/workouts/${id}`, {
+    const response = await fetch(`${API_URL}/workouts/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
     });
     if (!response.ok) throw new Error('Failed to fetch workout');
     return response.json();
   },
 
   create: async (workoutData) => {
-    const response = await apiFetch(`${API_URL}/workouts`, {
+    const response = await fetch(`${API_URL}/workouts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(workoutData),
     });
@@ -100,10 +105,11 @@ export const workoutsAPI = {
   },
 
   update: async (id, workoutData) => {
-    const response = await apiFetch(`${API_URL}/workouts/${id}`, {
+    const response = await fetch(`${API_URL}/workouts/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(workoutData),
     });
@@ -112,22 +118,31 @@ export const workoutsAPI = {
   },
 
   delete: async (id) => {
-    const response = await apiFetch(`${API_URL}/workouts/${id}`, {
+    const response = await fetch(`${API_URL}/workouts/${id}`, {
       method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
     });
     if (!response.ok) throw new Error('Failed to delete workout');
     return response.json();
   },
 
   getCommunity: async () => {
-    const response = await apiFetch(`${API_URL}/workouts/community/all`, {
+    const response = await fetch(`${API_URL}/workouts/community/all`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
     });
     if (!response.ok) throw new Error('Failed to fetch community workouts');
     return response.json();
   },
 
   getCommunityByUser: async (userId) => {
-    const response = await apiFetch(`${API_URL}/workouts/community/by-user/${userId}`, {
+    const response = await fetch(`${API_URL}/workouts/community/by-user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
     });
     if (!response.ok) throw new Error('Failed to fetch user workouts');
     return response.json();
@@ -137,24 +152,27 @@ export const workoutsAPI = {
 // Admin API (requires role=admin on server)
 export const adminAPI = {
   getStats: async () => {
-    const response = await apiFetch(`${API_URL}/admin/stats`, {
+    const response = await fetch(`${API_URL}/admin/stats`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Failed to load stats');
     return data;
   },
   getUsers: async () => {
-    const response = await apiFetch(`${API_URL}/admin/users`, {
+    const response = await fetch(`${API_URL}/admin/users`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Failed to load users');
     return data;
   },
   setUserRole: async (userId, role) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}/role`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/role`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ role }),
     });
@@ -163,18 +181,20 @@ export const adminAPI = {
     return data;
   },
   deleteUser: async (userId) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Failed to delete user');
     return data;
   },
   setUserPoints: async (userId, points) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}/points`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/points`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ points }),
     });
@@ -183,24 +203,27 @@ export const adminAPI = {
     return data;
   },
   getUser: async (userId) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Failed to load user');
     return data;
   },
   getUserSummary: async (userId) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}/summary`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/summary`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Failed to load summary');
     return data;
   },
   updateUserProfile: async (userId, payload) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}/profile`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/profile`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(payload),
     });
@@ -209,10 +232,11 @@ export const adminAPI = {
     return data;
   },
   setUserPassword: async (userId, newPassword) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}/password`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/password`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ newPassword }),
     });
@@ -221,17 +245,19 @@ export const adminAPI = {
     return data;
   },
   getActivity: async () => {
-    const response = await apiFetch(`${API_URL}/admin/activity`, {
+    const response = await fetch(`${API_URL}/admin/activity`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'Failed to load activity');
     return data;
   },
   setUserSuspended: async (userId, suspended) => {
-    const response = await apiFetch(`${API_URL}/admin/users/${userId}/suspend`, {
+    const response = await fetch(`${API_URL}/admin/users/${userId}/suspend`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ suspended }),
     });
@@ -240,10 +266,11 @@ export const adminAPI = {
     return data;
   },
   clearAllChat: async () => {
-    const response = await apiFetch(`${API_URL}/admin/chat/clear-all`, {
+    const response = await fetch(`${API_URL}/admin/chat/clear-all`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ confirm: 'DELETE_ALL_CHAT' }),
     });
@@ -256,7 +283,10 @@ export const adminAPI = {
 // Profile API
 export const profileAPI = {
   getProfile: async () => {
-    const response = await apiFetch(`${API_URL}/profile`, {
+    const response = await fetch(`${API_URL}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -268,7 +298,10 @@ export const profileAPI = {
   },
 
   getPublicProfile: async (userId) => {
-    const response = await apiFetch(`${API_URL}/profile/${userId}`, {
+    const response = await fetch(`${API_URL}/profile/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
     });
     if (!response.ok) throw new Error('Failed to fetch user profile');
     const data = await response.json();
@@ -276,10 +309,11 @@ export const profileAPI = {
   },
 
   updateProfile: async (profileData) => {
-    const response = await apiFetch(`${API_URL}/profile`, {
+    const response = await fetch(`${API_URL}/profile`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify(profileData)
     });
@@ -292,16 +326,18 @@ export const profileAPI = {
 // Tracking API (body weight, water, PR)
 export const trackingAPI = {
   getBodyWeight: async () => {
-    const res = await apiFetch(`${API_URL}/tracking/body-weight`, {
+    const res = await fetch(`${API_URL}/tracking/body-weight`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch body weight');
     return res.json();
   },
   addBodyWeight: async (data) => {
-    const res = await apiFetch(`${API_URL}/tracking/body-weight`, {
+    const res = await fetch(`${API_URL}/tracking/body-weight`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(data),
     });
@@ -309,23 +345,26 @@ export const trackingAPI = {
     return res.json();
   },
   deleteBodyWeight: async (id) => {
-    const res = await apiFetch(`${API_URL}/tracking/body-weight/${id}`, {
+    const res = await fetch(`${API_URL}/tracking/body-weight/${id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete');
     return res.json();
   },
   getWaterToday: async () => {
-    const res = await apiFetch(`${API_URL}/tracking/water/today`, {
+    const res = await fetch(`${API_URL}/tracking/water/today`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch water');
     return res.json();
   },
   addWater: async (data) => {
-    const res = await apiFetch(`${API_URL}/tracking/water`, {
+    const res = await fetch(`${API_URL}/tracking/water`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(data),
     });
@@ -333,30 +372,34 @@ export const trackingAPI = {
     return res.json();
   },
   deleteWater: async (id) => {
-    const res = await apiFetch(`${API_URL}/tracking/water/${id}`, {
+    const res = await fetch(`${API_URL}/tracking/water/${id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete water entry');
     return res.json();
   },
   getPR: async () => {
-    const res = await apiFetch(`${API_URL}/tracking/pr`, {
+    const res = await fetch(`${API_URL}/tracking/pr`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch PRs');
     return res.json();
   },
 
   getPRByUser: async (userId) => {
-    const res = await apiFetch(`${API_URL}/tracking/pr/user/${userId}`, {
+    const res = await fetch(`${API_URL}/tracking/pr/user/${userId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch user PRs');
     return res.json();
   },
   addPR: async (data) => {
-    const res = await apiFetch(`${API_URL}/tracking/pr`, {
+    const res = await fetch(`${API_URL}/tracking/pr`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(data),
     });
@@ -364,8 +407,9 @@ export const trackingAPI = {
     return res.json();
   },
   deletePR: async (id) => {
-    const res = await apiFetch(`${API_URL}/tracking/pr/${id}`, {
+    const res = await fetch(`${API_URL}/tracking/pr/${id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete');
     return res.json();
@@ -375,16 +419,18 @@ export const trackingAPI = {
 // Progress Photos API
 export const progressPhotosAPI = {
   getAll: async () => {
-    const res = await apiFetch(`${API_URL}/progress-photos`, {
+    const res = await fetch(`${API_URL}/progress-photos`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch progress photos');
     return res.json();
   },
   add: async (data) => {
-    const res = await apiFetch(`${API_URL}/progress-photos`, {
+    const res = await fetch(`${API_URL}/progress-photos`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(data),
     });
@@ -392,8 +438,9 @@ export const progressPhotosAPI = {
     return res.json();
   },
   delete: async (id) => {
-    const res = await apiFetch(`${API_URL}/progress-photos/${id}`, {
+    const res = await fetch(`${API_URL}/progress-photos/${id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete photo');
     return res.json();
@@ -403,21 +450,23 @@ export const progressPhotosAPI = {
 // Challenges API
 export const challengesAPI = {
   getList: async () => {
-    const res = await apiFetch(`${API_URL}/challenges`);
+    const res = await fetch(`${API_URL}/challenges`);
     if (!res.ok) throw new Error('Failed to fetch challenges');
     return res.json();
   },
   getLeaderboard: async () => {
-    const res = await apiFetch(`${API_URL}/challenges/leaderboard`, {
+    const res = await fetch(`${API_URL}/challenges/leaderboard`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch leaderboard');
     return res.json();
   },
   award: async (action) => {
-    const res = await apiFetch(`${API_URL}/challenges/award`, {
+    const res = await fetch(`${API_URL}/challenges/award`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ action }),
     });
@@ -429,7 +478,8 @@ export const challengesAPI = {
 // Workout Sessions API (completed workout history)
 export const workoutSessionsAPI = {
   getStats: async () => {
-    const res = await apiFetch(`${API_URL}/workout-sessions/stats`, {
+    const res = await fetch(`${API_URL}/workout-sessions/stats`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) {
       const err = new Error('Failed to fetch workout stats');
@@ -439,7 +489,8 @@ export const workoutSessionsAPI = {
     return res.json();
   },
   getAll: async () => {
-    const res = await apiFetch(`${API_URL}/workout-sessions`, {
+    const res = await fetch(`${API_URL}/workout-sessions`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) {
       const err = new Error('Failed to fetch workout history');
@@ -449,10 +500,11 @@ export const workoutSessionsAPI = {
     return res.json();
   },
   create: async (data) => {
-    const res = await apiFetch(`${API_URL}/workout-sessions`, {
+    const res = await fetch(`${API_URL}/workout-sessions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify(data),
     });
@@ -460,15 +512,17 @@ export const workoutSessionsAPI = {
     return res.json();
   },
   delete: async (id) => {
-    const res = await apiFetch(`${API_URL}/workout-sessions/${id}`, {
+    const res = await fetch(`${API_URL}/workout-sessions/${id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete workout');
     return res.json();
   },
   deleteAll: async () => {
-    const res = await apiFetch(`${API_URL}/workout-sessions`, {
+    const res = await fetch(`${API_URL}/workout-sessions`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete history');
     return res.json();
@@ -478,16 +532,18 @@ export const workoutSessionsAPI = {
 // Chat API
 export const chatAPI = {
   getPublicMessages: async () => {
-    const res = await apiFetch(`${API_URL}/chat/public/messages`, {
+    const res = await fetch(`${API_URL}/chat/public/messages`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch messages');
     return res.json();
   },
   sendPublicMessage: async (content, replyTo) => {
-    const res = await apiFetch(`${API_URL}/chat/public/messages`, {
+    const res = await fetch(`${API_URL}/chat/public/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ content, ...(replyTo && { replyTo }) }),
     });
@@ -495,16 +551,18 @@ export const chatAPI = {
     return res.json();
   },
   getConversations: async () => {
-    const res = await apiFetch(`${API_URL}/chat/conversations`, {
+    const res = await fetch(`${API_URL}/chat/conversations`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch conversations');
     return res.json();
   },
   createConversation: async (otherUserId) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations`, {
+    const res = await fetch(`${API_URL}/chat/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ otherUserId }),
     });
@@ -512,10 +570,11 @@ export const chatAPI = {
     return res.json();
   },
   createGroupChat: async (name, participantIds) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/group`, {
+    const res = await fetch(`${API_URL}/chat/conversations/group`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ name, participantIds }),
     });
@@ -523,16 +582,18 @@ export const chatAPI = {
     return res.json();
   },
   getConversationMessages: async (conversationId) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/${conversationId}/messages`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${conversationId}/messages`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch messages');
     return res.json();
   },
   sendPrivateMessage: async (conversationId, content, replyTo) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/${conversationId}/messages`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ content, ...(replyTo && { replyTo }) }),
     });
@@ -540,23 +601,26 @@ export const chatAPI = {
     return res.json();
   },
   getUsers: async () => {
-    const res = await apiFetch(`${API_URL}/chat/users`, {
+    const res = await fetch(`${API_URL}/chat/users`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to fetch users');
     return res.json();
   },
   deleteConversation: async (conversationId) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/${conversationId}`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${conversationId}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete conversation');
     return res.json();
   },
   addToGroup: async (conversationId, userId) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/${conversationId}/add`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${conversationId}/add`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ userId }),
     });
@@ -567,10 +631,11 @@ export const chatAPI = {
     return res.json();
   },
   kickFromGroup: async (conversationId, userId) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/${conversationId}/kick`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${conversationId}/kick`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ userId }),
     });
@@ -582,10 +647,11 @@ export const chatAPI = {
   },
   updatePublicMessage: async (messageId, content) => {
     const id = typeof messageId === 'string' ? messageId : messageId?.toString?.() || messageId;
-    const res = await apiFetch(`${API_URL}/chat/public/messages/${id}`, {
+    const res = await fetch(`${API_URL}/chat/public/messages/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ content }),
     });
@@ -595,10 +661,11 @@ export const chatAPI = {
   updatePrivateMessage: async (conversationId, messageId, content) => {
     const cId = typeof conversationId === 'string' ? conversationId : conversationId?.toString?.() || conversationId;
     const mId = typeof messageId === 'string' ? messageId : messageId?.toString?.() || messageId;
-    const res = await apiFetch(`${API_URL}/chat/conversations/${cId}/messages/${mId}`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${cId}/messages/${mId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
       body: JSON.stringify({ content }),
     });
@@ -606,15 +673,17 @@ export const chatAPI = {
     return res.json();
   },
   deletePublicMessage: async (messageId) => {
-    const res = await apiFetch(`${API_URL}/chat/public/messages/${messageId}`, {
+    const res = await fetch(`${API_URL}/chat/public/messages/${messageId}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete message');
     return res.json();
   },
   deletePrivateMessage: async (conversationId, messageId) => {
-    const res = await apiFetch(`${API_URL}/chat/conversations/${conversationId}/messages/${messageId}`, {
+    const res = await fetch(`${API_URL}/chat/conversations/${conversationId}/messages/${messageId}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
     if (!res.ok) throw new Error('Failed to delete message');
     return res.json();
