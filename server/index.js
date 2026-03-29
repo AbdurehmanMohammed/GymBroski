@@ -95,6 +95,11 @@ mongoose
       }
     });
     console.log('Workout reminder cron: every 10 min (WORKOUT_REMINDER_CRON=false to disable)');
+    console.log(
+      '[workoutReminders] env flags:',
+      `TRUST_SAVED_TIME=${process.env.WORKOUT_REMINDER_TRUST_SAVED_TIME === 'true'}`,
+      `DEBUG=${process.env.WORKOUT_REMINDER_DEBUG === 'true'}`
+    );
   })
   .catch((err) => console.error('MongoDB connection error:', err));
 

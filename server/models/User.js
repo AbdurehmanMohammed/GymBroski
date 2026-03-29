@@ -67,6 +67,12 @@ const userSchema = new mongoose.Schema({
   timezone: { type: String, default: 'UTC', trim: true },
   /** YYYY-MM-DD in user TZ — last reminder sent */
   lastWorkoutReminderSentOn: { type: String, default: '' },
+  /** Which split the last reminder was for (same calendar day + same id = no duplicate; new id = allow again) */
+  lastWorkoutReminderWorkoutId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'WorkoutSplit',
+    default: null,
+  },
   /** Email when someone sends a private/group chat message */
   emailChatNotifications: { type: Boolean, default: true },
   lastChatEmailNotificationAt: { type: Date, default: null }

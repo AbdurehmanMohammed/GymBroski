@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiX, FiPlus, FiMinus, FiGlobe, FiCalendar } from 'react-icons/fi';
 import { workoutAPI, profileAPI } from '../services/api';
 import { mergeScheduleForWorkout, getTrainingDaysForWorkoutFromUser } from '../utils/workoutScheduleMerge';
@@ -64,6 +64,41 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       return '';
     }
   });
+
+  /** Login only stored a slim user — load real schedule + reminder time from API so we don’t show empty days or wipe the server on save. */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const prof = await profileAPI.getProfile();
+        if (cancelled) return;
+        const sched = Array.isArray(prof.workoutSchedule) ? prof.workoutSchedule : [];
+        setTrainingDays(getTrainingDaysForWorkoutFromUser({ workoutSchedule: sched }, workout._id));
+        setScheduleReminderTime(formatReminderTimeForInput(prof.workoutReminderHour, prof.workoutReminderMinute));
+        try {
+          const raw = JSON.parse(localStorage.getItem('user') || '{}');
+          localStorage.setItem(
+            'user',
+            JSON.stringify({
+              ...raw,
+              workoutSchedule: sched,
+              workoutReminderHour: prof.workoutReminderHour,
+              workoutReminderMinute: prof.workoutReminderMinute,
+              timezone: prof.timezone || raw.timezone,
+              emailWorkoutReminders: prof.emailWorkoutReminders,
+            })
+          );
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        /* offline / stale token — keep localStorage-derived state */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workout._id]);
 
   const toggleTrainingDay = (d) => {
     setTrainingDays((prev) =>

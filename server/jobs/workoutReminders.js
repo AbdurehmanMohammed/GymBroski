@@ -306,7 +306,7 @@ export async function runWorkoutReminderJob() {
 
   const users = await User.find({ emailWorkoutReminders: { $ne: false } })
     .select(
-      'email name emailWorkoutReminders workoutSchedule workoutReminderHour workoutReminderMinute timezone lastWorkoutReminderSentOn'
+      'email name emailWorkoutReminders workoutSchedule workoutReminderHour workoutReminderMinute timezone lastWorkoutReminderSentOn lastWorkoutReminderWorkoutId'
     )
     .lean();
 
@@ -352,9 +352,20 @@ export async function runWorkoutReminderJob() {
     }
 
     const todayKey = now.toFormat('yyyy-MM-dd');
+    const curWid = String(wid);
+    const lastWid = u.lastWorkoutReminderWorkoutId
+      ? String(u.lastWorkoutReminderWorkoutId)
+      : '';
     if (u.lastWorkoutReminderSentOn === todayKey) {
-      dbg(logEmail, 'skip: already sent today');
-      continue;
+      if (!lastWid) {
+        dbg(logEmail, 'skip: already sent today (upgrade: assign a different workout to today to get another reminder)');
+        continue;
+      }
+      if (lastWid === curWid) {
+        dbg(logEmail, 'skip: already sent today for this workout');
+        continue;
+      }
+      dbg(logEmail, "same day but today's workout changed — sending for new split");
     }
 
     const workout = await WorkoutSplit.findOne({
@@ -398,7 +409,10 @@ export async function runWorkoutReminderJob() {
       continue;
     }
 
-    await User.updateOne({ _id: u._id }, { $set: { lastWorkoutReminderSentOn: todayKey } });
+    await User.updateOne(
+      { _id: u._id },
+      { $set: { lastWorkoutReminderSentOn: todayKey, lastWorkoutReminderWorkoutId: wid } }
+    );
     sent++;
     console.log('[workoutReminders] sent workout email to', logEmail);
   }

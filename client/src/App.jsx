@@ -86,6 +86,20 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
         }
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
+        try {
+          const prof = await profileAPI.getProfile();
+          const { success: _s, ...profRest } = prof;
+          localStorage.setItem(
+            'user',
+            JSON.stringify({
+              ...response.user,
+              ...profRest,
+              id: response.user.id,
+            })
+          );
+        } catch {
+          /* keep slim user from login */
+        }
         setSuccess('Login successful! Redirecting...');
         window.setTimeout(() => {
           window.location.replace(`${window.location.origin}/dashboard`);
@@ -101,6 +115,20 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
         }
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
+        try {
+          const prof = await profileAPI.getProfile();
+          const { success: _s, ...profRest } = prof;
+          localStorage.setItem(
+            'user',
+            JSON.stringify({
+              ...response.user,
+              ...profRest,
+              id: response.user.id,
+            })
+          );
+        } catch {
+          /* keep slim user */
+        }
         setSuccess('Registration successful! Redirecting...');
         window.setTimeout(() => {
           window.location.replace(`${window.location.origin}/dashboard`);
@@ -389,16 +417,18 @@ function App() {
     profileAPI
       .getProfile()
       .then((data) => {
-        if (data?.role != null || data?.username != null) {
-          try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
-            if (data.role != null) u.role = data.role;
-            if (data.username != null) u.username = data.username;
-            localStorage.setItem('user', JSON.stringify(u));
-            setProfileSync((n) => n + 1);
-          } catch {
-            /* ignore */
-          }
+        try {
+          const u = JSON.parse(localStorage.getItem('user') || '{}');
+          const { success: _s, ...rest } = data;
+          const next = {
+            ...u,
+            ...rest,
+            id: u.id,
+          };
+          localStorage.setItem('user', JSON.stringify(next));
+          setProfileSync((n) => n + 1);
+        } catch {
+          /* ignore */
         }
       })
       .catch(() => {});
