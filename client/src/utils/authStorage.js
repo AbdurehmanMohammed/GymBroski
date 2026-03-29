@@ -37,19 +37,21 @@ export function getAuthUserJson() {
 }
 
 export function setAuthUserJson(userObject) {
-  const u =
-    userObject && typeof userObject === 'object'
-      ? {
-          ...userObject,
-          id:
-            userObject.id != null
-              ? String(userObject.id)
-              : userObject._id != null
-                ? String(userObject._id)
-                : userObject.id,
-        }
-      : userObject;
+  if (userObject == null || typeof userObject !== 'object' || Array.isArray(userObject)) {
+    return;
+  }
+  const u = { ...userObject };
+  if (userObject.id != null) {
+    u.id = String(userObject.id);
+  } else if (userObject._id != null) {
+    u.id = String(userObject._id);
+  }
   getStore()?.setItem(USER_KEY, JSON.stringify(u));
+}
+
+/** Call after login/register so route guards re-read session (does not remount socket on every profile save). */
+export function setAuthUserJsonAndNotify(userObject) {
+  setAuthUserJson(userObject);
   notifyAuthSessionUpdated();
 }
 

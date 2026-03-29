@@ -11,7 +11,7 @@ import {
 } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI, profileAPI } from './services/api';
-import { getParsedAuthUser, setAuthUserJson, clearAuthSession } from './utils/authStorage';
+import { getParsedAuthUser, setAuthUserJson, setAuthUserJsonAndNotify, clearAuthSession } from './utils/authStorage';
 import { AUTH_SESSION_UPDATED } from './utils/authSessionEvents';
 import BrandLogo from './components/BrandLogo';
 import Admin from './components/Admin';
@@ -260,7 +260,7 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           password: formData.password,
           rememberMe
         });
-        setAuthUserJson(response.user);
+        setAuthUserJsonAndNotify(response.user);
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
@@ -270,7 +270,7 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
           ...formData,
           rememberMe
         });
-        setAuthUserJson(response.user);
+        setAuthUserJsonAndNotify(response.user);
         setSuccess('Registration successful! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard', { replace: true });

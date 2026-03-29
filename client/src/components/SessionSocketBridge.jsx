@@ -5,7 +5,7 @@ import { isAdminUser } from '../utils/authRole';
 import { ADMIN_REFRESH_EVENT } from '../constants/socketEvents';
 import { setSocketConnected } from '../utils/socketLiveStore';
 import { authAPI } from '../services/api';
-import { invalidateClientSession, invalidateFromAuthFailure } from '../utils/sessionInvalidation';
+import { invalidateClientSession } from '../utils/sessionInvalidation';
 
 /**
  * Socket.io + periodic API session ping (fallback when static site and API are on different hosts).
@@ -17,7 +17,6 @@ export default function SessionSocketBridge() {
     let cancelled = false;
     let adminDebounce;
     let pingTimer;
-    let pingBoot;
     let onVis;
 
     const scheduleAdminRefresh = (detail) => {
@@ -49,7 +48,7 @@ export default function SessionSocketBridge() {
       const onConnectError = (err) => {
         setSocketConnected(false);
         console.warn(
-          '[socket] connect_error — realtime push may be unavailable; session ping will still sign out deleted users.',
+          '[socket] connect_error — realtime push may be unavailable.',
           err?.message || err
         );
       };
@@ -74,28 +73,27 @@ export default function SessionSocketBridge() {
 
       if (socket.connected) setSocketConnected(true);
 
+      /**
+       * Periodic ping only — do not logout on 401/403 (cookie can lag after login on mobile / cross-site).
+       * Account removal: rely on Socket `session:invalidate` or 401 from real API calls (Dashboard, etc.).
+       */
       const runSessionPing = async () => {
         if (document.visibilityState !== 'visible') return;
         try {
-          const { status, message } = await authAPI.sessionPing();
-          if (status === 401 || status === 403) {
-            invalidateFromAuthFailure(status, message);
-          }
+          await authAPI.sessionPing();
         } catch {
           /* network blip */
         }
       };
-      pingTimer = window.setInterval(runSessionPing, 10000);
+      pingTimer = window.setInterval(runSessionPing, 60000);
       onVis = () => {
         if (document.visibilityState === 'visible') runSessionPing();
       };
       document.addEventListener('visibilitychange', onVis);
-      pingBoot = window.setTimeout(runSessionPing, 3000);
     })();
 
     return () => {
       cancelled = true;
-      clearTimeout(pingBoot);
       clearInterval(pingTimer);
       if (onVis) document.removeEventListener('visibilitychange', onVis);
       clearTimeout(adminDebounce);
