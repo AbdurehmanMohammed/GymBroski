@@ -12,6 +12,7 @@ import {
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { authAPI, profileAPI } from './services/api';
 import { getParsedAuthUser, setAuthUserJson, clearAuthSession } from './utils/authStorage';
+import { AUTH_SESSION_UPDATED } from './utils/authSessionEvents';
 import BrandLogo from './components/BrandLogo';
 import Admin from './components/Admin';
 import Dashboard from './components/Dashboard';
@@ -46,6 +47,12 @@ function AppRoutesBody({
   authHydrated,
 }) {
   useLocation();
+  const [, setSessionEpoch] = useState(0);
+  useEffect(() => {
+    const bump = () => setSessionEpoch((e) => e + 1);
+    window.addEventListener(AUTH_SESSION_UPDATED, bump);
+    return () => window.removeEventListener(AUTH_SESSION_UPDATED, bump);
+  }, []);
 
   const isAuthenticated = () => authHydrated && !!getParsedAuthUser()?.id;
   const isAdmin = () => {

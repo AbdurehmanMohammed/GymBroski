@@ -3,6 +3,7 @@
  * in sessionStorage for UI; GET /auth/me restores it when the cookie is valid (e.g. new tab).
  */
 import { authAPI } from '../services/api.js';
+import { notifyAuthSessionUpdated } from './authSessionEvents.js';
 
 const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
@@ -36,7 +37,20 @@ export function getAuthUserJson() {
 }
 
 export function setAuthUserJson(userObject) {
-  getStore()?.setItem(USER_KEY, JSON.stringify(userObject));
+  const u =
+    userObject && typeof userObject === 'object'
+      ? {
+          ...userObject,
+          id:
+            userObject.id != null
+              ? String(userObject.id)
+              : userObject._id != null
+                ? String(userObject._id)
+                : userObject.id,
+        }
+      : userObject;
+  getStore()?.setItem(USER_KEY, JSON.stringify(u));
+  notifyAuthSessionUpdated();
 }
 
 export function getParsedAuthUser() {
@@ -58,6 +72,7 @@ export function clearAuthSession() {
   } catch {
     /* ignore */
   }
+  notifyAuthSessionUpdated();
 }
 
 /** Clear server session cookie and client user cache (use for logout). */
