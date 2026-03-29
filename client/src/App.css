@@ -5905,6 +5905,13 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   padding: 8px 24px 28px;
 }
 
+/* Edit workout modal — same schedule UI with horizontal inset (avoid edge-hugging text) */
+.edit-workout-schedule-step {
+  padding: 16px 24px 0;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+
 .create-schedule-hero {
   display: flex;
   align-items: flex-start;
@@ -6009,6 +6016,55 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   color: #3730a3;
 }
 
+.create-schedule-reminder {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card-soft);
+  box-sizing: border-box;
+}
+
+.create-schedule-reminder-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.create-schedule-reminder-optional {
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+
+.create-schedule-reminder-input {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--border-soft);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.create-schedule-reminder-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-subtle);
+}
+
+.dark-theme .create-schedule-reminder-input {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+}
+
 .create-schedule-footnote {
   font-size: 13px;
   line-height: 1.5;
@@ -6018,6 +6074,40 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   border-radius: 12px;
   background: rgba(148, 163, 184, 0.12);
   border: 1px solid var(--border-soft);
+}
+
+@media (max-width: 560px) {
+  .modal-content.create-workout-modal .modal-header {
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 18px;
+  }
+
+  .create-workout-header .create-workout-subtitle {
+    max-width: none;
+  }
+
+  .create-schedule-step {
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-top: 12px;
+    padding-bottom: 24px;
+  }
+
+  .create-schedule-hero {
+    padding: 16px 14px;
+    gap: 12px;
+  }
+
+  .create-visibility-step {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .edit-workout-schedule-step {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
 }
 
 .dark-theme .create-schedule-day-btn--on {

@@ -15,6 +15,7 @@ import {
   convertWeightBetweenUnits,
   weightDisplayToStoredKg,
 } from '../utils/weightUnits';
+import { parseReminderTimeInput } from '../utils/reminderTime';
 
 // AI suggests workout based on muscle group (rule-based, no external API)
 function getAIWorkout(muscleGroups) {
@@ -81,6 +82,8 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
   /** build → visibility → schedule (training days) → save */
   const [phase, setPhase] = useState('build');
   const [trainingDays, setTrainingDays] = useState([]);
+  /** Empty = use default 6:00 AM in user time zone when saving schedule */
+  const [scheduleReminderTime, setScheduleReminderTime] = useState('');
   /** Which exercise row shows the name autocomplete dropdown */
   const [nameSuggestRow, setNameSuggestRow] = useState(null);
 
@@ -279,9 +282,12 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
           const raw = JSON.parse(localStorage.getItem('user') || '{}');
           const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
           const merged = mergeScheduleForWorkout(existing, wid, trainingDays);
+          const { hour, minute } = parseReminderTimeInput(scheduleReminderTime);
           const prof = await profileAPI.updateProfile({
             workoutSchedule: merged,
             timezone: getDeviceTimeZone(),
+            workoutReminderHour: hour,
+            workoutReminderMinute: minute,
           });
           localStorage.setItem('user', JSON.stringify({ ...raw, ...prof }));
         } catch (schedErr) {
@@ -331,8 +337,8 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
             {phase === 'schedule' && (
               <p className="create-workout-subtitle">
                 Choose which days you&apos;ll run <strong>{formData.name || 'this split'}</strong>. Other days stay as
-                they are — or rest if nothing is scheduled. Morning emails use your device time zone (
-                {getDeviceTimeZone()}).
+                they are — or rest if nothing is scheduled. Reminder emails use your time zone (
+                {getDeviceTimeZone()}) and the optional send time below (default 6:00 AM if you leave it blank).
               </p>
             )}
           </div>
@@ -712,11 +718,29 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
               })}
             </div>
 
+            <div className="create-schedule-reminder">
+              <label htmlFor="create-schedule-reminder-time" className="create-schedule-reminder-label">
+                Reminder time <span className="create-schedule-reminder-optional">(optional)</span>
+              </label>
+              <input
+                id="create-schedule-reminder-time"
+                type="time"
+                className="create-schedule-reminder-input"
+                value={scheduleReminderTime}
+                onChange={(e) => setScheduleReminderTime(e.target.value)}
+                aria-describedby="create-schedule-reminder-hint"
+              />
+              <p id="create-schedule-reminder-hint" className="create-schedule-reminder-hint">
+                If you skip this, we use <strong>6:00 AM</strong> in {getDeviceTimeZone()}. Requires workout email
+                reminders to be on in Profile and a working email setup on the server (e.g. Resend).
+              </p>
+            </div>
+
             <p className="create-schedule-footnote">
               {trainingDays.length > 0 ? (
                 <>
                   <strong>{trainingDays.length}</strong> training day{trainingDays.length === 1 ? '' : 's'} selected.
-                  Reminder emails (if enabled in Profile) go out once in the morning on those days, in your time zone.
+                  Reminder emails (if enabled in Profile) go out once per day around your chosen time on those days.
                 </>
               ) : (
                 <>No days selected — we&apos;ll only save the workout. You can assign days later by editing it.</>

@@ -62,7 +62,7 @@ const userSchema = new mongoose.Schema({
     ],
     default: []
   },
-  workoutReminderHour: { type: Number, min: 0, max: 23, default: 8 },
+  workoutReminderHour: { type: Number, min: 0, max: 23, default: 6 },
   workoutReminderMinute: { type: Number, min: 0, max: 59, default: 0 },
   timezone: { type: String, default: 'UTC', trim: true },
   /** YYYY-MM-DD in user TZ — last reminder sent */

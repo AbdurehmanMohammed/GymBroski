@@ -75,7 +75,7 @@ router.get('/', authenticateToken, async (req, res) => {
       emailWorkoutReminders: user.emailWorkoutReminders !== false,
       emailChatNotifications: user.emailChatNotifications !== false,
       workoutSchedule: Array.isArray(user.workoutSchedule) ? user.workoutSchedule : [],
-      workoutReminderHour: user.workoutReminderHour ?? 8,
+      workoutReminderHour: user.workoutReminderHour ?? 6,
       workoutReminderMinute: user.workoutReminderMinute ?? 0,
       timezone: user.timezone || 'UTC'
     });
@@ -173,7 +173,7 @@ router.put('/', authenticateToken, async (req, res) => {
       emailWorkoutReminders: user.emailWorkoutReminders !== false,
       emailChatNotifications: user.emailChatNotifications !== false,
       workoutSchedule: Array.isArray(user.workoutSchedule) ? user.workoutSchedule : [],
-      workoutReminderHour: user.workoutReminderHour ?? 8,
+      workoutReminderHour: user.workoutReminderHour ?? 6,
       workoutReminderMinute: user.workoutReminderMinute ?? 0,
       timezone: user.timezone || 'UTC'
     });

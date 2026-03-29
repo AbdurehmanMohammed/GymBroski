@@ -9,6 +9,7 @@ import {
   weightDisplayToStoredKg,
   storedKgToDisplay,
 } from '../utils/weightUnits';
+import { formatReminderTimeForInput, parseReminderTimeInput } from '../utils/reminderTime';
 
 function getDeviceTimeZone() {
   try {
@@ -53,6 +54,14 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       return getTrainingDaysForWorkoutFromUser(u, workout._id);
     } catch {
       return [];
+    }
+  });
+  const [scheduleReminderTime, setScheduleReminderTime] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      return formatReminderTimeForInput(u.workoutReminderHour, u.workoutReminderMinute);
+    } catch {
+      return '';
     }
   });
 
@@ -123,9 +132,12 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
         const raw = JSON.parse(localStorage.getItem('user') || '{}');
         const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
         const merged = mergeScheduleForWorkout(existing, workout._id, trainingDays);
+        const { hour, minute } = parseReminderTimeInput(scheduleReminderTime);
         const prof = await profileAPI.updateProfile({
           workoutSchedule: merged,
           timezone: getDeviceTimeZone(),
+          workoutReminderHour: hour,
+          workoutReminderMinute: minute,
         });
         localStorage.setItem('user', JSON.stringify({ ...raw, ...prof }));
       } catch (schedErr) {
@@ -390,7 +402,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
             </button>
           </div>
 
-          <div className="create-schedule-step" style={{ padding: '16px 0 0', marginTop: 8 }}>
+          <div className="create-schedule-step edit-workout-schedule-step">
             <div className="create-schedule-hero" style={{ marginBottom: 14 }}>
               <div className="create-schedule-hero-icon" aria-hidden>
                 <FiCalendar size={22} />
@@ -418,6 +430,23 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                   </button>
                 );
               })}
+            </div>
+            <div className="create-schedule-reminder">
+              <label htmlFor="edit-schedule-reminder-time" className="create-schedule-reminder-label">
+                Reminder time <span className="create-schedule-reminder-optional">(optional)</span>
+              </label>
+              <input
+                id="edit-schedule-reminder-time"
+                type="time"
+                className="create-schedule-reminder-input"
+                value={scheduleReminderTime}
+                onChange={(e) => setScheduleReminderTime(e.target.value)}
+                aria-describedby="edit-schedule-reminder-hint"
+              />
+              <p id="edit-schedule-reminder-hint" className="create-schedule-reminder-hint">
+                Default <strong>6:00 AM</strong> in {getDeviceTimeZone()} if left blank. Same time applies to all
+                scheduled workout reminders.
+              </p>
             </div>
           </div>
 
