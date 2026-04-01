@@ -243,16 +243,8 @@ function getEnvReminderTime() {
   };
 }
 
-/**
- * Per-user time from profile only when WORKOUT_REMINDER_TRUST_SAVED_TIME=true.
- * Otherwise we use getEnvReminderTime() for everyone — matches the original behavior before profile hours
- * were wired in (many users still have Mongoose’s old default 8:00 in DB, which moved the send window).
- */
+/** Use per-user saved reminder time (fallback to env default when unset/invalid). */
 function getReminderTimeForUser(u) {
-  if (process.env.WORKOUT_REMINDER_TRUST_SAVED_TIME !== 'true') {
-    return getEnvReminderTime();
-  }
-
   const fallback = getEnvReminderTime();
   const rawH = u.workoutReminderHour;
   const rawM = u.workoutReminderMinute;
@@ -346,7 +338,7 @@ export async function runWorkoutReminderJob() {
     if (!inReminderWindow(now, h, m)) {
       dbg(
         logEmail,
-        `skip: not in reminder window (local ${now.toFormat('HH:mm')}; send time ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${tz}, 35 min window — set WORKOUT_REMINDER_TRUST_SAVED_TIME=true to use Profile / schedule picker times)`
+        `skip: not in reminder window (local ${now.toFormat('HH:mm')}; send time ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${tz}, 35 min window)`
       );
       continue;
     }

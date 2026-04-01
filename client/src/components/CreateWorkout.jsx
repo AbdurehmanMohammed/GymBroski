@@ -36,9 +36,9 @@ function getAIWorkout(muscleGroups) {
         exercises.push({
           name: lib.name,
           sets: lib.defaultSets,
-          reps: lib.defaultReps,
+          reps: normalizeDefaultReps(lib.defaultReps),
           weight: (lib.defaultWeight && lib.defaultWeight !== '0') ? lib.defaultWeight : '',
-          weightUnit: 'kg',
+          weightUnit: 'lb',
           muscleGroup: lib.muscleGroup,
         });
       }
@@ -65,12 +65,17 @@ const WEEKDAY_PICKER = [
   { d: 6, short: 'Sat', full: 'Saturday' },
 ];
 
+function normalizeDefaultReps(reps) {
+  const raw = String(reps ?? '').trim();
+  return raw.startsWith('10-12') ? '10' : (raw || '10');
+}
+
 const CreateWorkout = ({ onClose, onSuccess }) => {
   const [mode, setMode] = useState('library'); // library | template | ai | manual
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    isPublic: false,
+    isPublic: true,
     exercises: [],
   });
   const [search, setSearch] = useState('');
@@ -108,9 +113,9 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         {
           name: ex.name,
           sets: ex.defaultSets,
-          reps: ex.defaultReps,
+          reps: normalizeDefaultReps(ex.defaultReps),
           weight: (ex.defaultWeight && ex.defaultWeight !== '0') ? ex.defaultWeight : '',
-          weightUnit: 'kg',
+          weightUnit: 'lb',
           muscleGroup: ex.muscleGroup,
         },
       ],
@@ -125,9 +130,9 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       exercises: tpl.exercises.map((e) => ({
         name: e.name,
         sets: e.sets,
-        reps: e.reps,
+        reps: normalizeDefaultReps(e.reps),
         weight: (e.weight && e.weight !== '0') ? e.weight : '',
-        weightUnit: 'kg',
+        weightUnit: 'lb',
         muscleGroup: e.muscleGroup || 'Other',
       })),
     });
@@ -158,7 +163,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       ...prev,
       exercises: [
         ...prev.exercises,
-        { name: '', sets: 3, reps: '10', weight: '', weightUnit: 'kg', muscleGroup: 'Other' },
+        { name: '', sets: 3, reps: '10', weight: '', weightUnit: 'lb', muscleGroup: 'Other' },
       ],
     }));
   };
@@ -189,10 +194,10 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         ...next[index],
         name: libEx.name,
         sets: libEx.defaultSets,
-        reps: libEx.defaultReps,
+        reps: normalizeDefaultReps(libEx.defaultReps),
         weight:
           libEx.defaultWeight && libEx.defaultWeight !== '0' ? libEx.defaultWeight : '',
-        weightUnit: 'kg',
+        weightUnit: 'lb',
         muscleGroup: libEx.muscleGroup,
       };
       return { ...prev, exercises: next };
@@ -240,7 +245,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
   const createPayload = () => ({
     ...formData,
     exercises: formData.exercises.map((ex) => {
-      const unit = ex.weightUnit || 'kg';
+      const unit = ex.weightUnit || 'lb';
       const raw = ex.weight;
       let weightStr;
       if (raw == null || String(raw).trim() === '') {
@@ -280,7 +285,15 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       if (trainingDays.length > 0) {
         try {
           const raw = JSON.parse(localStorage.getItem('user') || '{}');
-          const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
+          let existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
+          try {
+            const latestProfile = await profileAPI.getProfile();
+            if (Array.isArray(latestProfile.workoutSchedule)) {
+              existing = latestProfile.workoutSchedule;
+            }
+          } catch {
+            /* fallback to local cached schedule */
+          }
           const merged = mergeScheduleForWorkout(existing, wid, trainingDays);
           const { hour, minute } = parseReminderTimeInput(scheduleReminderTime);
           const prof = await profileAPI.updateProfile({
@@ -465,9 +478,9 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                     <div className="weight-unit-toggle" role="group" aria-label="Weight unit">
                       <button
                         type="button"
-                        className={`weight-unit-toggle__btn ${(ex.weightUnit || 'kg') === 'kg' ? 'active' : ''}`}
+                        className={`weight-unit-toggle__btn ${(ex.weightUnit || 'lb') === 'kg' ? 'active' : ''}`}
                         onClick={() => {
-                          const cur = ex.weightUnit || 'kg';
+                          const cur = ex.weightUnit || 'lb';
                           if (cur === 'kg') return;
                           const w = convertWeightBetweenUnits(ex.weight, 'lb', 'kg');
                           patchExercise(i, { weight: w, weightUnit: 'kg' });
@@ -477,9 +490,9 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                       </button>
                       <button
                         type="button"
-                        className={`weight-unit-toggle__btn ${(ex.weightUnit || 'kg') === 'lb' ? 'active' : ''}`}
+                        className={`weight-unit-toggle__btn ${(ex.weightUnit || 'lb') === 'lb' ? 'active' : ''}`}
                         onClick={() => {
-                          const cur = ex.weightUnit || 'kg';
+                          const cur = ex.weightUnit || 'lb';
                           if (cur === 'lb') return;
                           const w = convertWeightBetweenUnits(ex.weight, 'kg', 'lb');
                           patchExercise(i, { weight: w, weightUnit: 'lb' });
@@ -492,7 +505,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                       id={`create-exercise-weight-${i}`}
                       type="text"
                       placeholder={
-                        (ex.weightUnit || 'kg') === 'lb'
+                        (ex.weightUnit || 'lb') === 'lb'
                           ? 'e.g. 90, 0, or Bodyweight'
                           : 'e.g. 40, 0, or Bodyweight'
                       }

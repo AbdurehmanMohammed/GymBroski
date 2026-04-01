@@ -317,8 +317,10 @@ export const profileAPI = {
       },
       body: JSON.stringify(profileData)
     });
-    if (!response.ok) throw new Error('Failed to update profile');
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to update profile');
+    }
     return data;
   },
 };

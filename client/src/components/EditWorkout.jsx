@@ -29,6 +29,11 @@ const WEEKDAY_PICKER = [
   { d: 6, short: 'Sat' },
 ];
 
+function normalizeDefaultReps(reps) {
+  const raw = String(reps ?? '').trim();
+  return raw.startsWith('10-12') ? '10' : (raw || '10');
+}
+
 const EditWorkout = ({ workout, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: workout.name,
@@ -38,12 +43,12 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       ? workout.exercises.map((ex) => ({
           name: ex.name,
           sets: ex.sets,
-          reps: ex.reps,
-          weight: ex.weight === 0 || ex.weight === '0' ? '' : storedKgToDisplay(ex.weight, 'kg'),
-          weightUnit: 'kg',
+          reps: normalizeDefaultReps(ex.reps),
+          weight: ex.weight === 0 || ex.weight === '0' ? '' : storedKgToDisplay(ex.weight, 'lb'),
+          weightUnit: 'lb',
           muscleGroup: ex.muscleGroup || 'Other',
         }))
-      : [{ name: '', sets: 3, reps: 10, weight: '', weightUnit: 'kg', muscleGroup: 'Other' }]
+      : [{ name: '', sets: 3, reps: '10', weight: '', weightUnit: 'lb', muscleGroup: 'Other' }]
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -140,7 +145,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
     const payload = {
       ...formData,
       exercises: formData.exercises.map((ex) => {
-        const unit = ex.weightUnit || 'kg';
+        const unit = ex.weightUnit || 'lb';
         let w;
         if (ex.weight == null || String(ex.weight).trim() === '') {
           w = 0;
@@ -165,7 +170,15 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       await workoutAPI.update(workout._id, payload);
       try {
         const raw = JSON.parse(localStorage.getItem('user') || '{}');
-        const existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
+        let existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
+        try {
+          const latestProfile = await profileAPI.getProfile();
+          if (Array.isArray(latestProfile.workoutSchedule)) {
+            existing = latestProfile.workoutSchedule;
+          }
+        } catch {
+          /* fallback to local cached schedule */
+        }
         const merged = mergeScheduleForWorkout(existing, workout._id, trainingDays);
         const { hour, minute } = parseReminderTimeInput(scheduleReminderTime);
         const prof = await profileAPI.updateProfile({
@@ -198,7 +211,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       ...formData,
       exercises: [
         ...formData.exercises,
-        { name: '', sets: 3, reps: 10, weight: '', weightUnit: 'kg', muscleGroup: 'Other' },
+        { name: '', sets: 3, reps: '10', weight: '', weightUnit: 'lb', muscleGroup: 'Other' },
       ]
     });
   };
@@ -222,10 +235,10 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
         ...next[index],
         name: libEx.name,
         sets: libEx.defaultSets,
-        reps: libEx.defaultReps,
+        reps: normalizeDefaultReps(libEx.defaultReps),
         weight:
           libEx.defaultWeight && libEx.defaultWeight !== '0' ? libEx.defaultWeight : '',
-        weightUnit: 'kg',
+        weightUnit: 'lb',
         muscleGroup: libEx.muscleGroup,
       };
       return { ...prev, exercises: next };
@@ -386,9 +399,9 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                     <div className="weight-unit-toggle" role="group" aria-label="Weight unit">
                       <button
                         type="button"
-                        className={`weight-unit-toggle__btn ${(exercise.weightUnit || 'kg') === 'kg' ? 'active' : ''}`}
+                        className={`weight-unit-toggle__btn ${(exercise.weightUnit || 'lb') === 'kg' ? 'active' : ''}`}
                         onClick={() => {
-                          const cur = exercise.weightUnit || 'kg';
+                          const cur = exercise.weightUnit || 'lb';
                           if (cur === 'kg') return;
                           const w = convertWeightBetweenUnits(exercise.weight, 'lb', 'kg');
                           patchExercise(index, { weight: w, weightUnit: 'kg' });
@@ -398,9 +411,9 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                       </button>
                       <button
                         type="button"
-                        className={`weight-unit-toggle__btn ${(exercise.weightUnit || 'kg') === 'lb' ? 'active' : ''}`}
+                        className={`weight-unit-toggle__btn ${(exercise.weightUnit || 'lb') === 'lb' ? 'active' : ''}`}
                         onClick={() => {
-                          const cur = exercise.weightUnit || 'kg';
+                          const cur = exercise.weightUnit || 'lb';
                           if (cur === 'lb') return;
                           const w = convertWeightBetweenUnits(exercise.weight, 'kg', 'lb');
                           patchExercise(index, { weight: w, weightUnit: 'lb' });

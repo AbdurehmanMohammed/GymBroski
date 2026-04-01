@@ -123,12 +123,7 @@ router.put('/', authenticateToken, async (req, res) => {
         if (!wid || wid === '' || wid === 'null') continue;
         seen.add(day);
         const w = await WorkoutSplit.findOne({ _id: wid, userId: req.userId });
-        if (!w) {
-          return res.status(400).json({
-            success: false,
-            message: `Invalid workout for ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day]}`
-          });
-        }
+        if (!w) continue;
         cleaned.push({ day, workoutId: w._id });
       }
       updateData.workoutSchedule = cleaned;
