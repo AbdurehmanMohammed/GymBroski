@@ -5,6 +5,48 @@ import { awardPoints } from './challenges.js';
 
 const router = express.Router();
 
+const HAS_LETTER_RE = /[a-z]/i;
+const REPS_FORMAT_RE = /^\d+(?:\s*-\s*\d+)?$/;
+const WEIGHT_FORMAT_RE = /^\d+(?:\.\d+)?$/;
+
+function hasWorkoutNameLetter(name) {
+  return HAS_LETTER_RE.test(String(name || '').trim());
+}
+
+function isRepsValid(reps) {
+  return REPS_FORMAT_RE.test(String(reps ?? '').trim());
+}
+
+function isWeightValid(weight) {
+  return WEIGHT_FORMAT_RE.test(String(weight ?? '').trim());
+}
+
+function validateExercises(exercises) {
+  if (!Array.isArray(exercises) || exercises.length === 0) {
+    return 'Add at least one exercise.';
+  }
+  for (let i = 0; i < exercises.length; i += 1) {
+    const ex = exercises[i] || {};
+    const label = `Exercise ${i + 1}`;
+    const exName = String(ex.name || '').trim();
+    if (!exName) return `${label}: name is required.`;
+
+    const setsNum = Number(ex.sets);
+    if (!Number.isFinite(setsNum) || setsNum < 1) {
+      return `${label}: sets must be a number greater than 0.`;
+    }
+
+    if (!isRepsValid(ex.reps)) {
+      return `${label}: reps must be numbers only (example: 10 or 8-12).`;
+    }
+
+    if (!isWeightValid(ex.weight)) {
+      return `${label}: weight must be numeric only (example: 20 or 20.5).`;
+    }
+  }
+  return '';
+}
+
 // Protect all routes
 router.use(authenticateToken);
 
@@ -120,6 +162,19 @@ router.post('/', async (req, res) => {
         message: 'Workout name is required'
       });
     }
+    if (!hasWorkoutNameLetter(name)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workout name cannot be only numbers. Add at least one letter.'
+      });
+    }
+    const exerciseError = validateExercises(exercises);
+    if (exerciseError) {
+      return res.status(400).json({
+        success: false,
+        message: exerciseError
+      });
+    }
     
     const workout = new WorkoutSplit({
       userId: req.userId,
@@ -149,6 +204,26 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { name, description, isPublic, exercises } = req.body;
+    const trimmedName = String(name || '').trim();
+    if (!trimmedName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workout name is required'
+      });
+    }
+    if (!hasWorkoutNameLetter(trimmedName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workout name cannot be only numbers. Add at least one letter.'
+      });
+    }
+    const exerciseError = validateExercises(exercises);
+    if (exerciseError) {
+      return res.status(400).json({
+        success: false,
+        message: exerciseError
+      });
+    }
     
     const workout = await WorkoutSplit.findOneAndUpdate(
       { 
@@ -156,7 +231,7 @@ router.put('/:id', async (req, res) => {
         userId: req.userId 
       },
       {
-        name: name?.trim(),
+        name: trimmedName,
         description: description?.trim(),
         isPublic,
         exercises

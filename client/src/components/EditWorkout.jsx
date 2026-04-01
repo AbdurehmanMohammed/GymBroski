@@ -34,6 +34,10 @@ function normalizeDefaultReps(reps) {
   return raw.startsWith('10-12') ? '10' : (raw || '10');
 }
 
+const HAS_LETTER_RE = /[a-z]/i;
+const REPS_FORMAT_RE = /^\d+(?:\s*-\s*\d+)?$/;
+const WEIGHT_FORMAT_RE = /^\d+(?:\.\d+)?$/;
+
 const EditWorkout = ({ workout, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: workout.name,
@@ -128,6 +132,22 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!HAS_LETTER_RE.test(String(formData.name || '').trim())) {
+      setError('Workout name cannot be only numbers. Add at least one letter.');
+      return;
+    }
+    const invalidRepsIdx = formData.exercises.findIndex(
+      (ex) => !REPS_FORMAT_RE.test(String(ex.reps ?? '').trim())
+    );
+    if (invalidRepsIdx >= 0) {
+      setError('Reps must be numbers only (example: 10 or 8-12).');
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(`edit-exercise-reps-${invalidRepsIdx}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
+      return;
+    }
     const missingWeightIdx = formData.exercises.findIndex((ex) => !isExerciseWeightProvided(ex));
     if (missingWeightIdx >= 0) {
       setError(
@@ -135,6 +155,18 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       );
       window.requestAnimationFrame(() => {
         const el = document.getElementById(`edit-exercise-weight-${missingWeightIdx}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
+      return;
+    }
+    const invalidWeightIdx = formData.exercises.findIndex(
+      (ex) => !WEIGHT_FORMAT_RE.test(String(ex.weight ?? '').trim())
+    );
+    if (invalidWeightIdx >= 0) {
+      setError('Weight must be numeric only (example: 20 or 20.5).');
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(`edit-exercise-weight-${invalidWeightIdx}`);
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el?.focus();
       });
@@ -388,6 +420,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                   <div>
                     <label>Reps</label>
                     <input
+                      id={`edit-exercise-reps-${index}`}
                       type="text"
                       placeholder="e.g. 8-12 or 10"
                       value={exercise.reps ?? ''}
