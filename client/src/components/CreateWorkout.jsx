@@ -239,6 +239,8 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
       return;
     }
     setError('');
+    // Always default visibility to Public when entering this step.
+    setFormData((prev) => ({ ...prev, isPublic: true }));
     setPhase('visibility');
   };
 
