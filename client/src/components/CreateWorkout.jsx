@@ -71,6 +71,7 @@ function normalizeDefaultReps(reps) {
 }
 
 const HAS_LETTER_RE = /[a-z]/i;
+const HAS_DIGIT_RE = /\d/;
 const REPS_FORMAT_RE = /^\d+(?:\s*-\s*\d+)?$/;
 const WEIGHT_FORMAT_RE = /^\d+(?:\.\d+)?$/;
 
@@ -88,6 +89,8 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
   const [aiMuscleGroups, setAiMuscleGroups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [invalidFieldIds, setInvalidFieldIds] = useState([]);
+  const [validationHints, setValidationHints] = useState([]);
   /** build → visibility → schedule (training days) → save */
   const [phase, setPhase] = useState('build');
   const [trainingDays, setTrainingDays] = useState([]);
@@ -216,61 +219,56 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
 
   const goToVisibilityStep = (e) => {
     e?.preventDefault();
+    const invalidIds = [];
+    const hints = [];
+    const markInvalid = (id, hint) => {
+      invalidIds.push(id);
+      if (hint) hints.push(hint);
+    };
+
     if (formData.exercises.length === 0) {
-      setError('Add at least one exercise');
+      setError('Add at least one exercise.');
+      setInvalidFieldIds([]);
+      setValidationHints(['Add at least one exercise before continuing.']);
       return;
     }
-    const emptyNameIdx = formData.exercises.findIndex((ex) => !String(ex.name || '').trim());
-    if (emptyNameIdx >= 0) {
-      setError('Every exercise needs a name.');
-      window.requestAnimationFrame(() => {
-        const el = document.getElementById(`create-exercise-name-${emptyNameIdx}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el?.focus();
-      });
-      return;
-    }
+
     if (!HAS_LETTER_RE.test(String(formData.name || '').trim())) {
-      setError('Workout name cannot be only numbers. Add at least one letter.');
+      markInvalid('create-workout-name', 'Workout Name must include letters.');
+    }
+    if (HAS_DIGIT_RE.test(String(formData.name || '').trim())) {
+      markInvalid('create-workout-name', 'Workout Name cannot include numbers.');
+    }
+
+    formData.exercises.forEach((ex, idx) => {
+      const name = String(ex.name || '').trim();
+      if (!name) {
+        markInvalid(`create-exercise-name-${idx}`, `Exercise ${idx + 1}: Name is required.`);
+      } else if (HAS_DIGIT_RE.test(name)) {
+        markInvalid(`create-exercise-name-${idx}`, `Exercise ${idx + 1}: Name cannot include numbers.`);
+      }
+
+      if (!REPS_FORMAT_RE.test(String(ex.reps ?? '').trim())) {
+        markInvalid(`create-exercise-reps-${idx}`, `Exercise ${idx + 1}: Reps must be numeric (e.g. 10 or 8-12).`);
+      }
+
+      if (!isExerciseWeightProvided(ex)) {
+        markInvalid(`create-exercise-weight-${idx}`, `Exercise ${idx + 1}: Weight is required.`);
+      } else if (!WEIGHT_FORMAT_RE.test(String(ex.weight ?? '').trim())) {
+        markInvalid(`create-exercise-weight-${idx}`, `Exercise ${idx + 1}: Weight must be numeric (e.g. 20 or 20.5).`);
+      }
+    });
+
+    if (invalidIds.length > 0) {
+      setError('Please fix the highlighted fields.');
+      setInvalidFieldIds(Array.from(new Set(invalidIds)));
+      setValidationHints(hints);
       return;
     }
-    const invalidRepsIdx = formData.exercises.findIndex(
-      (ex) => !REPS_FORMAT_RE.test(String(ex.reps ?? '').trim())
-    );
-    if (invalidRepsIdx >= 0) {
-      setError('Reps must be numbers only (example: 10 or 8-12).');
-      window.requestAnimationFrame(() => {
-        const el = document.getElementById(`create-exercise-reps-${invalidRepsIdx}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el?.focus();
-      });
-      return;
-    }
-    const missingWeightIdx = formData.exercises.findIndex((ex) => !isExerciseWeightProvided(ex));
-    if (missingWeightIdx >= 0) {
-      setError(
-        'Every exercise needs a weight. Enter a number (kg or lb), 0 if no added weight, or Bodyweight.'
-      );
-      window.requestAnimationFrame(() => {
-        const el = document.getElementById(`create-exercise-weight-${missingWeightIdx}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el?.focus();
-      });
-      return;
-    }
-    const invalidWeightIdx = formData.exercises.findIndex(
-      (ex) => !WEIGHT_FORMAT_RE.test(String(ex.weight ?? '').trim())
-    );
-    if (invalidWeightIdx >= 0) {
-      setError('Weight must be numeric only (example: 20 or 20.5).');
-      window.requestAnimationFrame(() => {
-        const el = document.getElementById(`create-exercise-weight-${invalidWeightIdx}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el?.focus();
-      });
-      return;
-    }
+
     setError('');
+    setInvalidFieldIds([]);
+    setValidationHints([]);
     // Always default visibility to Public when entering this step.
     setFormData((prev) => ({ ...prev, isPublic: true }));
     setPhase('visibility');
@@ -394,7 +392,18 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
           </button>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-message">
+            <div>{error}</div>
+            {validationHints.length > 0 && (
+              <div className="error-message-list">
+                {validationHints.slice(0, 6).map((hint) => (
+                  <p key={hint}>{hint}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {phase === 'build' && (
           <>
@@ -402,9 +411,15 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
           <div className="form-group">
             <label>Workout Name</label>
             <input
+              id="create-workout-name"
               type="text"
+              className={invalidFieldIds.includes('create-workout-name') ? 'input-invalid' : ''}
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                setInvalidFieldIds((prev) => prev.filter((id) => id !== 'create-workout-name'));
+                setValidationHints([]);
+              }}
               placeholder="e.g., Push Day"
               required
             />
@@ -430,9 +445,14 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                     <input
                       id={`create-exercise-name-${i}`}
                       type="text"
+                      className={invalidFieldIds.includes(`create-exercise-name-${i}`) ? 'input-invalid' : ''}
                       placeholder="Exercise name — type to search (e.g. bic)"
                       value={ex.name}
-                      onChange={(e) => updateExercise(i, 'name', e.target.value)}
+                      onChange={(e) => {
+                        updateExercise(i, 'name', e.target.value);
+                        setInvalidFieldIds((prev) => prev.filter((id) => id !== `create-exercise-name-${i}`));
+                        setValidationHints([]);
+                      }}
                       onFocus={() => setNameSuggestRow(i)}
                       onBlur={() => {
                         window.setTimeout(() => {
@@ -503,9 +523,14 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                     <input
                       id={`create-exercise-reps-${i}`}
                       type="text"
+                      className={invalidFieldIds.includes(`create-exercise-reps-${i}`) ? 'input-invalid' : ''}
                       placeholder="10 or 8-12"
                       value={ex.reps}
-                      onChange={(e) => updateExercise(i, 'reps', e.target.value)}
+                      onChange={(e) => {
+                        updateExercise(i, 'reps', e.target.value);
+                        setInvalidFieldIds((prev) => prev.filter((id) => id !== `create-exercise-reps-${i}`));
+                        setValidationHints([]);
+                      }}
                     />
                   </div>
                   <div className="exercise-weight-block">
@@ -539,6 +564,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                     <input
                       id={`create-exercise-weight-${i}`}
                       type="text"
+                      className={invalidFieldIds.includes(`create-exercise-weight-${i}`) ? 'input-invalid' : ''}
                       placeholder={
                         (ex.weightUnit || 'lb') === 'lb'
                           ? 'e.g. 90, 0, or Bodyweight'
@@ -550,6 +576,8 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                         const n = parseFloat(v);
                         if (v !== '' && !Number.isNaN(n) && n < 0) return;
                         updateExercise(i, 'weight', v);
+                        setInvalidFieldIds((prev) => prev.filter((id) => id !== `create-exercise-weight-${i}`));
+                        setValidationHints([]);
                       }}
                     />
                   </div>
@@ -611,6 +639,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                     ))}
                   </select>
                 </div>
+                <p className="library-scroll-hint">Scroll to see more exercises ↓</p>
                 <div className="library-list">
                   {filteredExercises.map((ex) => (
                     <button

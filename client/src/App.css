@@ -5657,6 +5657,29 @@ html:not(.dark-theme) .modal-content .view-modal-text {
   min-width: 0;
 }
 
+/* Keep Create Workout action buttons visible while modal content scrolls. */
+.modal-content.create-workout-modal .form-actions {
+  position: sticky;
+  bottom: -1px;
+  z-index: 30;
+  margin-top: 14px;
+  margin-left: -24px;
+  margin-right: -24px;
+  margin-bottom: -24px;
+  padding: 14px 24px max(12px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-soft);
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  background: var(--bg-card);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.modal-content.create-workout-modal .create-form,
+.modal-content.create-workout-modal .create-visibility-step,
+.modal-content.create-workout-modal .create-schedule-step {
+  padding-bottom: max(108px, env(safe-area-inset-bottom, 0px));
+}
+
 html:not(.dark-theme) .modal-content.create-workout-modal {
   background: #ffffff;
 }
@@ -6059,6 +6082,20 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   color: var(--text-subtle);
 }
 
+.input-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.error-message-list {
+  margin-top: 8px;
+  font-size: 0.95em;
+}
+
+.error-message-list p {
+  margin: 2px 0;
+}
+
 .dark-theme .create-schedule-reminder-input {
   background: rgba(15, 23, 42, 0.85);
   border-color: rgba(148, 163, 184, 0.25);
@@ -6105,6 +6142,14 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   }
 
   .edit-workout-schedule-step {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .modal-content.create-workout-modal .form-actions {
+    margin-left: -18px;
+    margin-right: -18px;
+    margin-bottom: -24px;
     padding-left: 18px;
     padding-right: 18px;
   }
@@ -6361,6 +6406,37 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
+  scrollbar-gutter: stable;
+}
+
+.library-scroll-hint {
+  margin: -2px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+
+@media (max-width: 768px) {
+  .library-search {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .library-search-input-wrap {
+    grid-column: 1 / -1;
+  }
+
+  .library-search select {
+    min-height: 38px;
+    padding: 7px 34px 7px 10px;
+    font-size: 14px;
+  }
+
+  .library-list {
+    max-height: 220px;
+  }
 }
 
 .library-item {
@@ -10081,6 +10157,15 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   .modal-content {
     max-height: none;
     margin: auto 0;
+  }
+
+  /* Mobile: keep Create Workout as its own scroll container so sticky footer works on phones too. */
+  .modal-content.create-workout-modal {
+    width: 100%;
+    height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    margin: 0;
   }
 
   .track-panel {

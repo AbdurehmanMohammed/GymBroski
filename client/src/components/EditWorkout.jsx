@@ -35,6 +35,7 @@ function normalizeDefaultReps(reps) {
 }
 
 const HAS_LETTER_RE = /[a-z]/i;
+const HAS_DIGIT_RE = /\d/;
 const REPS_FORMAT_RE = /^\d+(?:\s*-\s*\d+)?$/;
 const WEIGHT_FORMAT_RE = /^\d+(?:\.\d+)?$/;
 
@@ -56,6 +57,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [invalidFieldIds, setInvalidFieldIds] = useState([]);
   const [nameSuggestRow, setNameSuggestRow] = useState(null);
   const [trainingDays, setTrainingDays] = useState(() => {
     try {
@@ -130,17 +132,53 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async (e) => {
+    const setValidationError = (message, ids = []) => {
+      setError(message);
+      setInvalidFieldIds(ids);
+    };
     e.preventDefault();
     setError('');
     if (!HAS_LETTER_RE.test(String(formData.name || '').trim())) {
-      setError('Workout name cannot be only numbers. Add at least one letter.');
+      setValidationError('Workout Name is invalid: it cannot be only numbers. Add at least one letter.', ['edit-workout-name']);
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById('edit-workout-name');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
+      return;
+    }
+    if (HAS_DIGIT_RE.test(String(formData.name || '').trim())) {
+      setValidationError('Workout Name is invalid: numbers are not allowed.', ['edit-workout-name']);
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById('edit-workout-name');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
+      return;
+    }
+    const invalidExerciseNameIdx = formData.exercises.findIndex(
+      (ex) => HAS_DIGIT_RE.test(String(ex.name || '').trim())
+    );
+    if (invalidExerciseNameIdx >= 0) {
+      setValidationError(
+        `Exercise ${invalidExerciseNameIdx + 1} Name is invalid: numbers are not allowed.`,
+        [`edit-exercise-name-${invalidExerciseNameIdx}`]
+      );
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById(`edit-exercise-name-${invalidExerciseNameIdx}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el?.focus();
+      });
       return;
     }
     const invalidRepsIdx = formData.exercises.findIndex(
       (ex) => !REPS_FORMAT_RE.test(String(ex.reps ?? '').trim())
     );
     if (invalidRepsIdx >= 0) {
-      setError('Reps must be numbers only (example: 10 or 8-12).');
+      setValidationError(
+        `Exercise ${invalidRepsIdx + 1} Reps is invalid: use numbers only (example: 10 or 8-12).`,
+        [`edit-exercise-reps-${invalidRepsIdx}`]
+      );
       window.requestAnimationFrame(() => {
         const el = document.getElementById(`edit-exercise-reps-${invalidRepsIdx}`);
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -150,8 +188,9 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
     }
     const missingWeightIdx = formData.exercises.findIndex((ex) => !isExerciseWeightProvided(ex));
     if (missingWeightIdx >= 0) {
-      setError(
-        'Every exercise needs a weight. Enter a number (kg or lb), 0 if you use no added weight, or Bodyweight.'
+      setValidationError(
+        'Every exercise needs a weight. Enter a number (kg or lb), 0 if you use no added weight, or Bodyweight.',
+        [`edit-exercise-weight-${missingWeightIdx}`]
       );
       window.requestAnimationFrame(() => {
         const el = document.getElementById(`edit-exercise-weight-${missingWeightIdx}`);
@@ -164,7 +203,10 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       (ex) => !WEIGHT_FORMAT_RE.test(String(ex.weight ?? '').trim())
     );
     if (invalidWeightIdx >= 0) {
-      setError('Weight must be numeric only (example: 20 or 20.5).');
+      setValidationError(
+        `Exercise ${invalidWeightIdx + 1} Weight is invalid: use numbers only (example: 20 or 20.5).`,
+        [`edit-exercise-weight-${invalidWeightIdx}`]
+      );
       window.requestAnimationFrame(() => {
         const el = document.getElementById(`edit-exercise-weight-${invalidWeightIdx}`);
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -172,6 +214,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
       });
       return;
     }
+    setInvalidFieldIds([]);
     setLoading(true);
 
     const payload = {
@@ -297,9 +340,14 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
           <div className="form-group">
             <label>Workout Name</label>
             <input
+              id="edit-workout-name"
               type="text"
+              className={invalidFieldIds.includes('edit-workout-name') ? 'input-invalid' : ''}
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => {
+                setFormData({...formData, name: e.target.value});
+                setInvalidFieldIds((prev) => prev.filter((id) => id !== 'edit-workout-name'));
+              }}
               placeholder="e.g., Push Day, Leg Day"
               required
             />
@@ -346,9 +394,13 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                     <input
                       id={`edit-exercise-name-${index}`}
                       type="text"
+                      className={invalidFieldIds.includes(`edit-exercise-name-${index}`) ? 'input-invalid' : ''}
                       placeholder="Exercise name — type to search (e.g. bic)"
                       value={exercise.name}
-                      onChange={(e) => updateExercise(index, 'name', e.target.value)}
+                      onChange={(e) => {
+                        updateExercise(index, 'name', e.target.value);
+                        setInvalidFieldIds((prev) => prev.filter((id) => id !== `edit-exercise-name-${index}`));
+                      }}
                       onFocus={() => setNameSuggestRow(index)}
                       onBlur={() => {
                         window.setTimeout(() => {
@@ -422,9 +474,13 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                     <input
                       id={`edit-exercise-reps-${index}`}
                       type="text"
+                      className={invalidFieldIds.includes(`edit-exercise-reps-${index}`) ? 'input-invalid' : ''}
                       placeholder="e.g. 8-12 or 10"
                       value={exercise.reps ?? ''}
-                      onChange={(e) => updateExercise(index, 'reps', e.target.value)}
+                      onChange={(e) => {
+                        updateExercise(index, 'reps', e.target.value);
+                        setInvalidFieldIds((prev) => prev.filter((id) => id !== `edit-exercise-reps-${index}`));
+                      }}
                     />
                   </div>
                   <div className="exercise-weight-block">
@@ -459,6 +515,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                       id={`edit-exercise-weight-${index}`}
                       type="text"
                       inputMode="decimal"
+                      className={invalidFieldIds.includes(`edit-exercise-weight-${index}`) ? 'input-invalid' : ''}
                       placeholder="e.g. 40, 0, or Bodyweight"
                       value={exercise.weight === 0 || exercise.weight === '0' ? '' : (exercise.weight ?? '')}
                       onChange={(e) => {
@@ -470,6 +527,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
                         const n = parseFloat(v);
                         if (!Number.isNaN(n) && n < 0) return;
                         updateExercise(index, 'weight', v);
+                        setInvalidFieldIds((prev) => prev.filter((id) => id !== `edit-exercise-weight-${index}`));
                       }}
                     />
                   </div>

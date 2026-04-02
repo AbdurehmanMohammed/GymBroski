@@ -6,11 +6,16 @@ import { awardPoints } from './challenges.js';
 const router = express.Router();
 
 const HAS_LETTER_RE = /[a-z]/i;
+const HAS_DIGIT_RE = /\d/;
 const REPS_FORMAT_RE = /^\d+(?:\s*-\s*\d+)?$/;
 const WEIGHT_FORMAT_RE = /^\d+(?:\.\d+)?$/;
 
 function hasWorkoutNameLetter(name) {
   return HAS_LETTER_RE.test(String(name || '').trim());
+}
+
+function hasNoDigits(text) {
+  return !HAS_DIGIT_RE.test(String(text || '').trim());
 }
 
 function isRepsValid(reps) {
@@ -30,6 +35,7 @@ function validateExercises(exercises) {
     const label = `Exercise ${i + 1}`;
     const exName = String(ex.name || '').trim();
     if (!exName) return `${label}: name is required.`;
+    if (!hasNoDigits(exName)) return `${label}: name cannot include numbers.`;
 
     const setsNum = Number(ex.sets);
     if (!Number.isFinite(setsNum) || setsNum < 1) {
@@ -168,6 +174,12 @@ router.post('/', async (req, res) => {
         message: 'Workout name cannot be only numbers. Add at least one letter.'
       });
     }
+    if (!hasNoDigits(name)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workout name cannot include numbers.'
+      });
+    }
     const exerciseError = validateExercises(exercises);
     if (exerciseError) {
       return res.status(400).json({
@@ -215,6 +227,12 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Workout name cannot be only numbers. Add at least one letter.'
+      });
+    }
+    if (!hasNoDigits(trimmedName)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workout name cannot include numbers.'
       });
     }
     const exerciseError = validateExercises(exercises);
