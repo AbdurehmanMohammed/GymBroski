@@ -371,7 +371,8 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
                       </span>
                       <span className="workout-history-stat-value">
                         <span aria-hidden>🏋</span>
-                        {entry.totalVolume?.toLocaleString() || 0} kg
+                        {(entry.volumeDisplay ?? entry.totalVolume ?? 0).toLocaleString()}{' '}
+                        {entry.volumeDisplayUnit || 'kg'}
                       </span>
                     </div>
                   </div>
@@ -562,11 +563,19 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
                     {formatDuration(selectedHistoryEntry.durationSec)}
                   </span>
                 </span>
-                <span className="summary-stat summary-stat--labeled">
+                <span
+                  className="summary-stat summary-stat--labeled"
+                  title={
+                    selectedHistoryEntry.volumeIsMixed
+                      ? 'This session mixed lb and kg exercises; total volume is shown in kg.'
+                      : undefined
+                  }
+                >
                   <span className="summary-stat-label">Volume</span>
                   <span className="summary-stat-row">
                     <span className="summary-stat-icon">🏋</span>
-                    {(selectedHistoryEntry.totalVolume || 0).toLocaleString()} kg
+                    {(selectedHistoryEntry.volumeDisplay ?? selectedHistoryEntry.totalVolume ?? 0).toLocaleString()}{' '}
+                    {selectedHistoryEntry.volumeDisplayUnit || 'kg'}
                   </span>
                 </span>
                 <span

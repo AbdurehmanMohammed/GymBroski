@@ -1,6 +1,13 @@
 const LB_PER_KG = 2.2046226218;
 const KG_PER_LB = 0.45359237;
 
+/** Workout session / photo post `totalVolume` is stored in kg — use for social feed in lb. */
+export function totalVolumeKgToLb(totalVolumeKg) {
+  const n = Number(totalVolumeKg);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.round(n * LB_PER_KG);
+}
+
 /** Convert numeric weight string between kg ↔ lb; preserves Bodyweight / non-numeric text. */
 export function convertWeightBetweenUnits(val, from, to) {
   if (from === to) return val == null ? '' : String(val);

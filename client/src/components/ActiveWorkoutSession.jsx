@@ -6,6 +6,7 @@ import {
   resolveExerciseWeightUnit,
   weightDisplayToStoredKg,
   storedKgToDisplay,
+  normalizeWeightUnit,
 } from '../utils/weightUnits';
 import { ExerciseVideoInfoIcon, ExerciseVideoHelpModal } from './ExerciseVideoHelp';
 import Iridescence from './Iridescence';
@@ -354,9 +355,7 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
     let anyLb = false;
     let anyKg = false;
     const exerciseBreakdown = exerciseState.map((ex) => {
-      const unit = ex.weightUnit === 'kg' ? 'kg' : 'lb';
-      if (unit === 'lb') anyLb = true;
-      else anyKg = true;
+      const unit = normalizeWeightUnit(ex.weightUnit) === 'kg' ? 'kg' : 'lb';
 
       const parseSetWeightKg = (s) => {
         const wStr = String(s.weight ?? '').trim();
@@ -365,6 +364,10 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
       };
 
       const completedSets = ex.sets.filter((s) => s.completed);
+      if (completedSets.length > 0) {
+        if (unit === 'lb') anyLb = true;
+        else anyKg = true;
+      }
       let bestSet = null;
       let bestVolume = -1;
       let durationSec = 0;
@@ -412,7 +415,8 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
         sets: setsLogged,
       };
     });
-    const volumeDisplayUnit = anyLb && !anyKg ? 'lb' : 'kg';
+    const volumeIsMixed = anyLb && anyKg;
+    const volumeDisplayUnit = volumeIsMixed ? 'kg' : anyLb ? 'lb' : 'kg';
     const volumeDisplay =
       volumeDisplayUnit === 'lb' ? Math.round(totalLbTonnage) : Math.round(totalVolumeKg);
     return {
@@ -422,6 +426,7 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
       totalVolume: Math.round(totalVolumeKg),
       volumeDisplay,
       volumeDisplayUnit,
+      volumeIsMixed,
       exerciseBreakdown,
       workoutCount: 0,
     };
@@ -481,6 +486,9 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
         dateISO,
         durationSec: data.durationSec,
         totalVolume: data.totalVolume,
+        volumeDisplay: data.volumeDisplay,
+        volumeDisplayUnit: data.volumeDisplayUnit,
+        volumeIsMixed: data.volumeIsMixed,
         exerciseBreakdown: data.exerciseBreakdown || [],
         prs: newPRs || [],
       };
@@ -630,7 +638,14 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
                     {formatDuration(summaryData.durationSec)}
                   </span>
                 </span>
-                <span className="summary-stat summary-stat--labeled">
+                <span
+                  className="summary-stat summary-stat--labeled"
+                  title={
+                    summaryData.volumeIsMixed
+                      ? 'This session mixed lb and kg exercises; total volume is shown in kg.'
+                      : undefined
+                  }
+                >
                   <span className="summary-stat-label">Volume</span>
                   <span className="summary-stat-row">
                     <span className="summary-stat-icon">🏋</span>
@@ -721,7 +736,14 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
                     {formatDuration(summaryData.durationSec)}
                   </span>
                 </span>
-                <span className="summary-stat summary-stat--labeled">
+                <span
+                  className="summary-stat summary-stat--labeled"
+                  title={
+                    summaryData.volumeIsMixed
+                      ? 'This session mixed lb and kg exercises; total volume is shown in kg.'
+                      : undefined
+                  }
+                >
                   <span className="summary-stat-label">Volume</span>
                   <span className="summary-stat-row">
                     <span className="summary-stat-icon">🏋</span>

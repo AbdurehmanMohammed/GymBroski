@@ -33,6 +33,10 @@ const workoutSessionSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  /** Same total as seen in the finish summary (lb-reps when all lb, else kg). totalVolume stays kg for rankings/APIs. */
+  volumeDisplay: { type: Number },
+  volumeDisplayUnit: { type: String },
+  volumeIsMixed: { type: Boolean },
   exerciseBreakdown: [{
     name: String,
     setsCount: Number,

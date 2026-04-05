@@ -30,6 +30,7 @@ import { useChatUnread } from '../hooks/useChatUnread';
 import CommunityChat from './CommunityChat';
 import ThemeToggle from './ThemeToggle';
 import { resolveExerciseVideoUrl } from '../utils/exerciseDemoVideo';
+import { totalVolumeKgToLb } from '../utils/weightUnits';
 import { ExerciseVideoInfoIcon, ExerciseVideoHelpModal } from './ExerciseVideoHelp';
 
 const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
@@ -578,7 +579,7 @@ const PublicWorkouts = ({ theme = 'light', onToggleTheme }) => {
                       <div className="community-photo-card__stat">
                         <span className="community-photo-card__stat-label">Volume</span>
                         <span className="community-photo-card__stat-value">
-                          <FiBarChart2 aria-hidden /> {Number(p.totalVolume || 0).toLocaleString()} kg
+                          <FiBarChart2 aria-hidden /> {totalVolumeKgToLb(p.totalVolume).toLocaleString()} lb
                         </span>
                       </div>
                       {(p.recordsCount || 0) > 0 ? (

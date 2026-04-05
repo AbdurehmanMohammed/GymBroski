@@ -80,7 +80,19 @@ router.get('/', async (req, res) => {
 // POST create a new workout session (when user finishes a workout)
 router.post('/', async (req, res) => {
   try {
-    const { workoutName, workoutId, dateStr, dateISO, durationSec, totalVolume, exerciseBreakdown, prs } = req.body;
+    const {
+      workoutName,
+      workoutId,
+      dateStr,
+      dateISO,
+      durationSec,
+      totalVolume,
+      volumeDisplay,
+      volumeDisplayUnit,
+      volumeIsMixed,
+      exerciseBreakdown,
+      prs,
+    } = req.body;
 
     if (!workoutName || !dateStr || !dateISO) {
       return res.status(400).json({
@@ -89,6 +101,8 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const volUnit =
+      volumeDisplayUnit === 'kg' || volumeDisplayUnit === 'lb' ? volumeDisplayUnit : undefined;
     const session = new WorkoutSession({
       userId: req.userId,
       workoutName,
@@ -97,6 +111,11 @@ router.post('/', async (req, res) => {
       dateISO,
       durationSec: durationSec ?? 0,
       totalVolume: totalVolume ?? 0,
+      ...(typeof volumeDisplay === 'number' && Number.isFinite(volumeDisplay)
+        ? { volumeDisplay: Math.round(volumeDisplay) }
+        : {}),
+      ...(volUnit ? { volumeDisplayUnit: volUnit } : {}),
+      ...(volumeIsMixed === true ? { volumeIsMixed: true } : {}),
       exerciseBreakdown: exerciseBreakdown ?? [],
       prs: prs ?? []
     });
