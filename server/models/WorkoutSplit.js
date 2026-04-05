@@ -31,7 +31,7 @@ const WorkoutSplitSchema = new mongoose.Schema({
     },
     muscleGroup: {
       type: String,
-      enum: ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Cardio', 'Other'],
+      enum: ['Chest', 'Back', 'Shoulders', 'Arms', 'Forearms', 'Legs', 'Core', 'Cardio', 'Other'],
       default: 'Other'
     },
     sets: {

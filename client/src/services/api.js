@@ -113,8 +113,9 @@ export const workoutsAPI = {
       },
       body: JSON.stringify(workoutData),
     });
-    if (!response.ok) throw new Error('Failed to update workout');
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Failed to update workout');
+    return data;
   },
 
   delete: async (id) => {

@@ -23,7 +23,16 @@ function isRepsValid(reps) {
 }
 
 function isWeightValid(weight) {
-  return WEIGHT_FORMAT_RE.test(String(weight ?? '').trim());
+  const t = String(weight ?? '').trim();
+  if (/^bodyweight$/i.test(t)) return true;
+  return WEIGHT_FORMAT_RE.test(t);
+}
+
+function mongooseValidationMessage(error) {
+  if (error?.name !== 'ValidationError' || !error.errors) return '';
+  return Object.values(error.errors)
+    .map((e) => e.message)
+    .join(' ');
 }
 
 function validateExercises(exercises) {
@@ -205,6 +214,10 @@ router.post('/', async (req, res) => {
     
   } catch (error) {
     console.error('Create workout error:', error);
+    const vmsg = mongooseValidationMessage(error);
+    if (vmsg) {
+      return res.status(400).json({ success: false, message: vmsg });
+    }
     res.status(500).json({
       success: false,
       message: 'Server error creating workout'
@@ -272,9 +285,13 @@ router.put('/:id', async (req, res) => {
     
   } catch (error) {
     console.error('Update workout error:', error);
-    res.status(500).json({ 
+    const vmsg = mongooseValidationMessage(error);
+    if (vmsg) {
+      return res.status(400).json({ success: false, message: vmsg });
+    }
+    res.status(500).json({
       success: false,
-      message: 'Server error updating workout' 
+      message: 'Server error updating workout',
     });
   }
 });
