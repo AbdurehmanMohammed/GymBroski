@@ -247,7 +247,7 @@ const AuthPage = ({ isLogin, setIsLogin, theme, onToggleTheme }) => {
                   onChange={handleChange}
                   className="auth-input-field"
                   style={{ ...styles.input, ...(isDark ? styles.inputDark : {}) }}
-                  placeholder="John Doe"
+                  placeholder="Tim Doe"
                   required={!isLogin}
                 />
               </div>
