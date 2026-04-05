@@ -27,7 +27,16 @@ function getAIWorkout(muscleGroups) {
     Back: ['Deadlift', 'Bent Over Barbell Row', 'Lat Pulldown', 'Face Pull'],
     Shoulders: ['Overhead Press', 'Lateral Raise', 'Rear Delt Fly'],
     Arms: ['Barbell Curl', 'Rope Pushdown', 'Hammer Curl', 'Skull Crushers'],
-    Legs: ['Barbell Squat', 'Romanian Deadlift', 'Leg Press', 'Lying Leg Curl', 'Standing Calf Raise'],
+    Forearms: ['Farmer\'s Walk', 'Barbell Wrist Curl', 'Reverse Dumbbell Wrist Curl', 'Cable Wrist Curl', 'Dead Hang'],
+    Legs: [
+      'Barbell Squat',
+      'Leg Extension',
+      'Romanian Deadlift',
+      'Leg Press',
+      'Walking Lunges',
+      'Lying Leg Curl',
+      'Standing Calf Raise',
+    ],
     Core: ['Plank', 'Crunches', 'Russian Twists', 'Hanging Leg Raise'],
     Cardio: ['Treadmill Running', 'Jump Rope', 'Rowing Machine'],
   };

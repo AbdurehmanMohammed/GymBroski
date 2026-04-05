@@ -7863,6 +7863,15 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
 
 .progress-photo-modal__footer .progress-photo-form-actions {
   padding-top: 0;
+  /* Modal is max 440px — always use a balanced two-column action bar (not viewport-gated). */
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .progress-photo-form-btn {
@@ -7922,9 +7931,11 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
 
 .progress-photo-modal__footer {
   flex-shrink: 0;
-  padding: 0 24px max(20px, env(safe-area-inset-bottom, 0px)) 24px;
+  padding: 14px max(16px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-right, 0px));
   background: var(--bg-card);
   border-top: 1px solid var(--border-soft);
+  box-sizing: border-box;
 }
 
 html:not(.dark-theme) .progress-photo-modal__footer {
@@ -7933,6 +7944,40 @@ html:not(.dark-theme) .progress-photo-modal__footer {
 
 .dark-theme .progress-photo-modal__footer {
   background: var(--bg-card);
+}
+
+.progress-photo-modal__footer .progress-photo-form-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px;
+  font-size: 15px;
+  border-radius: 14px;
+  box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.progress-photo-modal__footer .progress-photo-form-btn--ghost {
+  background: color-mix(in srgb, var(--bg-card-soft) 100%, transparent);
+  color: var(--text-main);
+  border: 2px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  font-weight: 700;
+}
+
+.dark-theme .progress-photo-modal__footer .progress-photo-form-btn--ghost {
+  background: rgba(30, 41, 59, 0.9);
+  color: #f1f5f9;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+html:not(.dark-theme) .progress-photo-modal__footer .progress-photo-form-btn--ghost {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #e2e8f0;
 }
 
 .modal-content.progress-photo-modal::before {
@@ -7983,6 +8028,10 @@ html:not(.dark-theme) .progress-photo-modal__footer {
 
 .progress-photo-form__field:last-of-type {
   margin-bottom: 0;
+}
+
+.progress-photo-modal .progress-photo-form .progress-photo-form__field:last-of-type {
+  margin-bottom: 16px;
 }
 
 .progress-photo-form .form-label {

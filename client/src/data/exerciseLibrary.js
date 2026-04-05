@@ -1,5 +1,5 @@
 // Exercise library for Create Workout modal - search, filter, add exercises
-export const MUSCLE_GROUPS = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Core', 'Cardio'];
+export const MUSCLE_GROUPS = ['Chest', 'Back', 'Shoulders', 'Arms', 'Forearms', 'Legs', 'Core', 'Cardio'];
 export const EQUIPMENT_TYPES = ['Barbell', 'Dumbbell', 'Machine', 'Cable', 'Bodyweight', 'Other'];
 
 /** First options for library filter `<select>`s — use correct spelling: equipment */
@@ -115,6 +115,27 @@ export const EXERCISE_LIBRARY = [
   def('Dips', 'Arms', 'Bodyweight', 3, '8-12', 'Bodyweight'),
   def('Bench Dips', 'Arms', 'Bodyweight', 3, '15-20', 'Bodyweight'),
   def('Ring Dips', 'Arms', 'Bodyweight', 3, '8-12', 'Bodyweight'),
+  // FOREARMS & GRIP
+  def('Barbell Wrist Curl', 'Forearms', 'Barbell', 3, '12-20'),
+  def('Standing Barbell Wrist Curl', 'Forearms', 'Barbell', 3, '12-20'),
+  def('Reverse Barbell Wrist Curl', 'Forearms', 'Barbell', 3, '12-20'),
+  def('Behind the Back Barbell Wrist Curl', 'Forearms', 'Barbell', 3, '12-20'),
+  def('Dumbbell Wrist Curl', 'Forearms', 'Dumbbell', 3, '12-20'),
+  def('Seated Dumbbell Wrist Curl', 'Forearms', 'Dumbbell', 3, '12-20'),
+  def('Reverse Dumbbell Wrist Curl', 'Forearms', 'Dumbbell', 3, '12-20'),
+  def('Incline Dumbbell Wrist Curl', 'Forearms', 'Dumbbell', 3, '12-20'),
+  def('Cable Wrist Curl', 'Forearms', 'Cable', 3, '12-20'),
+  def('Reverse Cable Wrist Curl', 'Forearms', 'Cable', 3, '12-20'),
+  def('Rope Wrist Curl', 'Forearms', 'Cable', 3, '15-20'),
+  def('Farmer\'s Walk', 'Forearms', 'Dumbbell', 3, '40-60s'),
+  def('Farmer\'s Carry', 'Forearms', 'Dumbbell', 3, '40-60s'),
+  def('Trap Bar Farmer\'s Walk', 'Forearms', 'Barbell', 3, '40-60s'),
+  def('Plate Pinch Hold', 'Forearms', 'Other', 3, '20-40s'),
+  def('Dead Hang', 'Forearms', 'Bodyweight', 3, '30-60s', 'Bodyweight'),
+  def('Towel Pull-ups', 'Forearms', 'Bodyweight', 3, '6-10', 'Bodyweight'),
+  def('Fat Grip Barbell Curl', 'Forearms', 'Barbell', 3, '10-12'),
+  def('Gripper Squeeze', 'Forearms', 'Other', 3, '10-15 each'),
+  def('Wrist Roller', 'Forearms', 'Other', 3, '2-3 rolls'),
   // LEGS
   def('Barbell Squat', 'Legs', 'Barbell', 4, '8-12'),
   def('Front Squat', 'Legs', 'Barbell', 4, '8-10'),
@@ -125,6 +146,14 @@ export const EXERCISE_LIBRARY = [
   def('Glute Bridge', 'Legs', 'Barbell', 3, '12-15'),
   def('Hack Squat', 'Legs', 'Machine', 4, '10-12'),
   def('Leg Press', 'Legs', 'Machine', 4, '10-12'),
+  def('Leg Extension', 'Legs', 'Machine', 3, '12-20'),
+  def('Single Leg Extension', 'Legs', 'Machine', 3, '12-15 each'),
+  def('Pendulum Squat', 'Legs', 'Machine', 4, '10-12'),
+  def('V-Squat', 'Legs', 'Machine', 4, '10-12'),
+  def('Vertical Leg Press', 'Legs', 'Machine', 4, '10-12'),
+  def('Smith Machine Squat', 'Legs', 'Machine', 4, '8-12'),
+  def('Adductor Machine', 'Legs', 'Machine', 3, '15-20'),
+  def('Abductor Machine', 'Legs', 'Machine', 3, '15-20'),
   def('Lying Leg Curl', 'Legs', 'Machine', 3, '12-15'),
   def('Seated Leg Curl', 'Legs', 'Machine', 3, '12-15'),
   def('Standing Calf Raise', 'Legs', 'Machine', 4, '15-20'),
@@ -135,6 +164,12 @@ export const EXERCISE_LIBRARY = [
   def('Step Ups', 'Legs', 'Dumbbell', 3, '10 each'),
   def('Goblet Squat', 'Legs', 'Dumbbell', 3, '10-12'),
   def('Reverse Lunges', 'Legs', 'Dumbbell', 3, '10 each'),
+  def('Walking Lunges', 'Legs', 'Dumbbell', 3, '12 each'),
+  def('Curtsy Lunge', 'Legs', 'Dumbbell', 3, '10 each'),
+  def('Box Squat', 'Legs', 'Barbell', 4, '6-10'),
+  def('Pause Squat', 'Legs', 'Barbell', 4, '5-8'),
+  def('Sumo Deadlift', 'Legs', 'Barbell', 4, '5-8'),
+  def('Trap Bar Deadlift', 'Legs', 'Barbell', 4, '6-10'),
   def('Cable Kickbacks', 'Legs', 'Cable', 3, '12-15 each'),
   def('Sissy Squat', 'Legs', 'Bodyweight', 3, '12-15', 'Bodyweight'),
   def('Nordic Hamstring Curl', 'Legs', 'Bodyweight', 3, '5-10', 'Bodyweight'),
@@ -214,8 +249,21 @@ export const WORKOUT_TEMPLATES = [
       { name: 'Barbell Squat', sets: 4, reps: '8-12', weight: '0', muscleGroup: 'Legs' },
       { name: 'Romanian Deadlift', sets: 3, reps: '10-12', weight: '0', muscleGroup: 'Legs' },
       { name: 'Leg Press', sets: 4, reps: '10-12', weight: '0', muscleGroup: 'Legs' },
+      { name: 'Leg Extension', sets: 3, reps: '12-15', weight: '0', muscleGroup: 'Legs' },
       { name: 'Lying Leg Curl', sets: 3, reps: '12-15', weight: '0', muscleGroup: 'Legs' },
       { name: 'Standing Calf Raise', sets: 4, reps: '15-20', weight: '0', muscleGroup: 'Legs' },
+    ],
+  },
+  {
+    id: 'forearms-grip',
+    name: 'Forearms & Grip',
+    description: 'Wrists, grip strength, carries',
+    exercises: [
+      { name: 'Farmer\'s Walk', sets: 3, reps: '45s', weight: '0', muscleGroup: 'Forearms' },
+      { name: 'Barbell Wrist Curl', sets: 3, reps: '15', weight: '0', muscleGroup: 'Forearms' },
+      { name: 'Reverse Dumbbell Wrist Curl', sets: 3, reps: '15', weight: '0', muscleGroup: 'Forearms' },
+      { name: 'Cable Wrist Curl', sets: 3, reps: '15', weight: '0', muscleGroup: 'Forearms' },
+      { name: 'Dead Hang', sets: 3, reps: '45s', weight: 'Bodyweight', muscleGroup: 'Forearms' },
     ],
   },
   {
@@ -235,6 +283,7 @@ export const WORKOUT_TEMPLATES = [
       { name: 'Rope Pushdown', sets: 3, reps: '12-15', weight: '0', muscleGroup: 'Arms' },
       { name: 'Barbell Squat', sets: 4, reps: '8-12', weight: '0', muscleGroup: 'Legs' },
       { name: 'Leg Press', sets: 3, reps: '10-12', weight: '0', muscleGroup: 'Legs' },
+      { name: 'Leg Extension', sets: 3, reps: '12-15', weight: '0', muscleGroup: 'Legs' },
     ],
   },
   {
