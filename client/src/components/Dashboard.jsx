@@ -62,6 +62,16 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
     fetchWorkouts();
   }, []);
 
+  /** After edit/create refetch, keep selected workout in sync so Start session sees weightUnit etc. */
+  useEffect(() => {
+    if (!workouts?.length) return;
+    setSelectedWorkout((prev) => {
+      if (!prev?._id) return prev;
+      const fresh = workouts.find((w) => String(w._id) === String(prev._id));
+      return fresh || prev;
+    });
+  }, [workouts]);
+
   const fetchWorkoutHistory = async () => {
     try {
       const data = await workoutSessionsAPI.getAll();
@@ -105,8 +115,14 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
     setShowEditForm(true);
   };
 
-  const handleStartWorkout = (workout) => {
-    setSelectedWorkout(workout);
+  const handleStartWorkout = async (workout) => {
+    try {
+      const fresh = await workoutAPI.getById(workout._id);
+      setSelectedWorkout(fresh);
+    } catch (err) {
+      console.error('Failed to load workout for session:', err);
+      setSelectedWorkout(workout);
+    }
     setShowActiveSession(true);
   };
 
@@ -151,7 +167,7 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
             <FiCalendar /> My Workouts
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/community')}>
-            <FiGlobe /> Community Feed
+            <FiGlobe /> Bruski's Feed
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/progress')}>
             <FiTrendingUp /> Progress
@@ -396,26 +412,42 @@ const Dashboard = ({ theme = 'light', onToggleTheme }) => {
 
       {/* Create Workout Modal */}
       {showCreateForm && (
-        <CreateWorkout 
+        <CreateWorkout
           onClose={() => setShowCreateForm(false)}
-          onSuccess={fetchWorkouts}
+          onSuccess={async (created) => {
+            if (created?._id) {
+              setWorkouts((prev) => {
+                const id = String(created._id);
+                return [created, ...prev.filter((w) => String(w._id) !== id)];
+              });
+            }
+            await fetchWorkouts();
+          }}
         />
       )}
 
       {/* Edit Workout Modal */}
       {showEditForm && selectedWorkout && (
-        <EditWorkout 
+        <EditWorkout
           workout={selectedWorkout}
           onClose={() => {
             setShowEditForm(false);
             setSelectedWorkout(null);
           }}
-          onSuccess={fetchWorkouts}
+          onSuccess={async (saved) => {
+            if (saved?._id) {
+              setWorkouts((prev) =>
+                prev.map((w) => (String(w._id) === String(saved._id) ? saved : w))
+              );
+            }
+            await fetchWorkouts();
+          }}
         />
       )}
 
       {showActiveSession && selectedWorkout && (
         <ActiveWorkoutSession
+          key={`${selectedWorkout._id}-${selectedWorkout.updatedAt ?? ''}`}
           workout={selectedWorkout}
           theme={theme}
           onClose={() => {

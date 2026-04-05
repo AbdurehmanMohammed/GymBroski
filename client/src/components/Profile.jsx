@@ -69,6 +69,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
 
   const [emailWorkoutReminders, setEmailWorkoutReminders] = useState(true);
   const [emailChatNotifications, setEmailChatNotifications] = useState(true);
+  const [emailCommunityPhotoNotifications, setEmailCommunityPhotoNotifications] = useState(true);
   const [reminderSaving, setReminderSaving] = useState(false);
   const [myWorkouts, setMyWorkouts] = useState([]);
   const closeMenu = () => setMenuOpen(false);
@@ -230,6 +231,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
       });
       setEmailWorkoutReminders(userData.emailWorkoutReminders !== false);
       setEmailChatNotifications(userData.emailChatNotifications !== false);
+      setEmailCommunityPhotoNotifications(userData.emailCommunityPhotoNotifications !== false);
       localStorage.setItem('user', JSON.stringify(userData));
 
       const tz = getDeviceTimeZone();
@@ -322,6 +324,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
       const response = await profileAPI.updateProfile({
         emailWorkoutReminders,
         emailChatNotifications,
+        emailCommunityPhotoNotifications,
         workoutReminderHour: 6,
         workoutReminderMinute: 0,
         timezone: getDeviceTimeZone(),
@@ -368,7 +371,7 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
             <FiCalendar /> My Workouts
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/community')}>
-            <FiGlobe /> Community Feed
+            <FiGlobe /> Bruski's Feed
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/progress')}>
             <FiTrendingUp /> Progress
@@ -783,6 +786,17 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
                 <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: profileStyles.textSubtle, lineHeight: 1.45 }}>
                   Desktop pop-ups for new chat messages when you’re in another tab are <strong>enabled</strong>. To turn them off, use your browser’s site settings for this page (not Profile).
                 </p>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginTop: '14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={emailCommunityPhotoNotifications}
+                    onChange={(e) => setEmailCommunityPhotoNotifications(e.target.checked)}
+                    style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#667eea', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: profileStyles.textPrimary }}>
+                    Email me when someone uploads a photo to Bruski's photos
+                  </span>
+                </label>
               </div>
 
               <button

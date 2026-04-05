@@ -5,7 +5,7 @@ const POLL_INTERVAL = 20000; // 20 seconds
 
 /**
  * Hook that fetches total unread private chat count and polls periodically.
- * Use this to show a notification badge on the Chat tab and Community Feed nav.
+ * Use this to show a notification badge on the Chat tab and Bruski's Feed nav.
  */
 export function useChatUnread() {
   const [count, setCount] = useState(0);

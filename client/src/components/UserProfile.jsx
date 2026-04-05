@@ -90,6 +90,7 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
           sets: ex.sets,
           reps: ex.reps,
           weight: ex.weight,
+          weightUnit: ex.weightUnit === 'kg' ? 'kg' : 'lb',
           muscleGroup: ex.muscleGroup || 'Other',
           videoUrl: resolveExerciseVideoUrl(ex),
         })),
@@ -152,7 +153,7 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
               onClick={() => navigate('/community')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              <FiArrowLeft /> Back to Community
+              <FiArrowLeft /> Back to Bruski's Feed
             </button>
           </div>
         </div>
@@ -178,7 +179,7 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
             <FiCalendar /> My Workouts
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/community')}>
-            <FiGlobe /> Community Feed
+            <FiGlobe /> Bruski's Feed
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/progress')}>
             <FiTrendingUp /> Progress
@@ -211,7 +212,7 @@ const UserProfile = ({ theme = 'light', onToggleTheme }) => {
             </button>
             <button type="button" className="user-profile-back-btn" onClick={() => navigate('/community')}>
               <FiArrowLeft size={18} aria-hidden />
-              Back to Community
+              Back to Bruski's Feed
             </button>
             <div className="toggle-mobile">
               <ThemeToggle theme={theme} onToggleTheme={onToggleTheme} variant="header" />

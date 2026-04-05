@@ -91,7 +91,7 @@ const Challenges = ({ theme = 'light', onToggleTheme }) => {
             <FiCalendar /> My Workouts
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/community')}>
-            <FiGlobe /> Community Feed
+            <FiGlobe /> Bruski's Feed
           </button>
           <button type="button" className="nav-btn" onClick={() => navTo('/progress')}>
             <FiTrendingUp /> Progress

@@ -36,7 +36,7 @@ export function useChatBrowserNotifications() {
           const delta = total - prevUnreadRef.current;
           if (document.visibilityState === 'hidden') {
             new Notification(delta === 1 ? 'New message' : `${delta} new messages`, {
-              body: 'Open Community → Chat to read.',
+              body: "Open Bruski's Feed → Chat to read.",
               icon: '/favicon.ico',
               tag: 'gym-chat-unread'
             });

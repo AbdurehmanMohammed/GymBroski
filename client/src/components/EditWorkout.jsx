@@ -8,6 +8,8 @@ import {
   convertWeightBetweenUnits,
   weightDisplayToStoredKg,
   storedKgToDisplay,
+  exerciseWeightUnit,
+  persistWorkoutExerciseUnits,
 } from '../utils/weightUnits';
 import { formatReminderTimeForInput, parseReminderTimeInput } from '../utils/reminderTime';
 
@@ -45,14 +47,22 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
     description: workout.description || '',
     isPublic: workout.isPublic,
     exercises: workout.exercises.length > 0
-      ? workout.exercises.map((ex) => ({
-          name: ex.name,
-          sets: ex.sets,
-          reps: normalizeDefaultReps(ex.reps),
-          weight: ex.weight === 0 || ex.weight === '0' ? '' : storedKgToDisplay(ex.weight, 'lb'),
-          weightUnit: 'lb',
-          muscleGroup: ex.muscleGroup || 'Other',
-        }))
+      ? workout.exercises.map((ex) => {
+          const u = exerciseWeightUnit(ex);
+          return {
+            name: ex.name,
+            sets: ex.sets,
+            reps: normalizeDefaultReps(ex.reps),
+            weight:
+              ex.weight === 0 || ex.weight === '0'
+                ? ''
+                : /^bodyweight$/i.test(String(ex.weight).trim())
+                  ? String(ex.weight).trim()
+                  : storedKgToDisplay(ex.weight, u),
+            weightUnit: u,
+            muscleGroup: ex.muscleGroup || 'Other',
+          };
+        })
       : [{ name: '', sets: 3, reps: '10', weight: '', weightUnit: 'lb', muscleGroup: 'Other' }]
   });
   const [loading, setLoading] = useState(false);
@@ -220,7 +230,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
     const payload = {
       ...formData,
       exercises: formData.exercises.map((ex) => {
-        const unit = ex.weightUnit || 'lb';
+        const unit = exerciseWeightUnit(ex);
         let w;
         if (ex.weight == null || String(ex.weight).trim() === '') {
           w = 0;
@@ -235,6 +245,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
           sets: ex.sets,
           reps: ex.reps,
           weight: w,
+          weightUnit: unit,
           muscleGroup: ex.muscleGroup || 'Other',
           videoUrl: getExerciseDemoVideoUrl(ex.name),
         };
@@ -242,7 +253,8 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
     };
 
     try {
-      await workoutAPI.update(workout._id, payload);
+      const updated = await workoutAPI.update(workout._id, payload);
+      persistWorkoutExerciseUnits(workout._id, payload.exercises);
       try {
         const raw = JSON.parse(localStorage.getItem('user') || '{}');
         let existing = Array.isArray(raw.workoutSchedule) ? raw.workoutSchedule : [];
@@ -271,7 +283,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
             : 'Workout saved, but schedule could not be updated. Try again from edit.'
         );
       }
-      onSuccess();
+      onSuccess(updated);
       onClose();
     } catch (err) {
       console.error('Error updating workout:', err);
@@ -368,7 +380,7 @@ const EditWorkout = ({ workout, onClose, onSuccess }) => {
               <FiGlobe size={20} />
             </div>
             <div className="public-visibility-content">
-              <span className="public-visibility-title">Share on Community Feed</span>
+              <span className="public-visibility-title">Share on Bruski&apos;s Feed</span>
               <span className="public-visibility-desc">Other users can discover and copy this workout</span>
             </div>
             <label className="public-visibility-toggle">

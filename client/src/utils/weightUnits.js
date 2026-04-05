@@ -24,6 +24,59 @@ export function weightDisplayToStoredKg(weight, unit) {
   return String(n);
 }
 
+/** Normalize API / form values (handles casing, lbs, missing). */
+export function normalizeWeightUnit(raw) {
+  const u = String(raw ?? '').trim().toLowerCase();
+  if (u === 'kg' || u === 'kgs' || u === 'kilogram' || u === 'kilograms') return 'kg';
+  if (u === 'lb' || u === 'lbs' || u === 'pound' || u === 'pounds') return 'lb';
+  return '';
+}
+
+/**
+ * Display unit for a workout exercise (create/edit/start session).
+ * Only 'kg' if explicitly kg; otherwise 'lb' (matches editor default + legacy data without weightUnit).
+ */
+export function exerciseWeightUnit(ex) {
+  return normalizeWeightUnit(ex?.weightUnit) === 'kg' ? 'kg' : 'lb';
+}
+
+const SS_KEY = (workoutId) => `weightUnits:${String(workoutId)}`;
+
+/** Remember units after save so Start session matches edit even if API omits weightUnit (stale server). */
+export function persistWorkoutExerciseUnits(workoutId, exercises) {
+  if (workoutId == null || workoutId === '') return;
+  try {
+    const o = {};
+    (exercises || []).forEach((e, i) => {
+      const u = exerciseWeightUnit(e);
+      o[`${String(e.name || '').trim()}::${i}`] = u;
+    });
+    sessionStorage.setItem(SS_KEY(workoutId), JSON.stringify(o));
+  } catch (_) {
+    /* ignore quota / private mode */
+  }
+}
+
+/**
+ * Unit for active session: API first, then sessionStorage from last save, else lb.
+ */
+export function resolveExerciseWeightUnit(ex, exerciseIndex, workoutId) {
+  const direct = normalizeWeightUnit(ex?.weightUnit);
+  if (direct === 'kg' || direct === 'lb') return direct;
+  if (workoutId == null || workoutId === '') return 'lb';
+  try {
+    const raw = sessionStorage.getItem(SS_KEY(workoutId));
+    if (!raw) return 'lb';
+    const o = JSON.parse(raw);
+    const key = `${String(ex?.name || '').trim()}::${exerciseIndex}`;
+    const cached = normalizeWeightUnit(o[key]);
+    if (cached === 'kg' || cached === 'lb') return cached;
+  } catch (_) {
+    /* ignore */
+  }
+  return 'lb';
+}
+
 /** API stores kg — show in UI for lb mode */
 export function storedKgToDisplay(stored, unit) {
   if (stored == null || stored === '') return '';

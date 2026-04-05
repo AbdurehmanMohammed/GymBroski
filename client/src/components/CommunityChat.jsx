@@ -991,7 +991,7 @@ const CommunityChat = ({ currentUser, onClose, initialChatWithUser, onUnreadChan
                 autoCorrect="on"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder={tab === 'public' ? 'Message the community…' : 'Type a message…'}
+                placeholder={tab === 'public' ? "Message Bruski's Feed…" : 'Type a message…'}
                 maxLength={2000}
                 disabled={sending}
               />

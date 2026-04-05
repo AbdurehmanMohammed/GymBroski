@@ -233,7 +233,7 @@ const Tracking = ({ theme = 'light', onToggleTheme }) => {
         </div>
         <nav>
           {navBtn('/dashboard', 'My Workouts', <FiCalendar />)}
-          {navBtn('/community', 'Community Feed', <FiGlobe />)}
+          {navBtn('/community', "Bruski's Feed", <FiGlobe />)}
           {navBtn('/progress', 'Progress', <FiTrendingUp />)}
           {navBtn('/challenges', 'Challenges', <FiAward />)}
           <button type="button" className="nav-btn active" onClick={closeMenu}>

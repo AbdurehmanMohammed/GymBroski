@@ -46,6 +46,12 @@ const WorkoutSplitSchema = new mongoose.Schema({
       type: String,
       default: 'Bodyweight'
     },
+    /** How the user entered template weight in the editor; stored weight is always kg (or Bodyweight). */
+    weightUnit: {
+      type: String,
+      enum: ['kg', 'lb'],
+      default: 'lb'
+    },
     videoUrl: {
       type: String,
       default: ''

@@ -74,6 +74,7 @@ router.get('/', authenticateToken, async (req, res) => {
       ...lb,
       emailWorkoutReminders: user.emailWorkoutReminders !== false,
       emailChatNotifications: user.emailChatNotifications !== false,
+      emailCommunityPhotoNotifications: user.emailCommunityPhotoNotifications !== false,
       workoutSchedule: Array.isArray(user.workoutSchedule) ? user.workoutSchedule : [],
       workoutReminderHour: user.workoutReminderHour ?? 6,
       workoutReminderMinute: user.workoutReminderMinute ?? 0,
@@ -96,6 +97,7 @@ router.put('/', authenticateToken, async (req, res) => {
       profilePhoto,
       emailWorkoutReminders,
       emailChatNotifications,
+      emailCommunityPhotoNotifications,
       workoutSchedule,
       workoutReminderHour,
       workoutReminderMinute,
@@ -111,6 +113,9 @@ router.put('/', authenticateToken, async (req, res) => {
     }
     if (typeof emailChatNotifications === 'boolean') {
       updateData.emailChatNotifications = emailChatNotifications;
+    }
+    if (typeof emailCommunityPhotoNotifications === 'boolean') {
+      updateData.emailCommunityPhotoNotifications = emailCommunityPhotoNotifications;
     }
     if (Array.isArray(workoutSchedule)) {
       const cleaned = [];
@@ -167,6 +172,7 @@ router.put('/', authenticateToken, async (req, res) => {
       ...lbAfter,
       emailWorkoutReminders: user.emailWorkoutReminders !== false,
       emailChatNotifications: user.emailChatNotifications !== false,
+      emailCommunityPhotoNotifications: user.emailCommunityPhotoNotifications !== false,
       workoutSchedule: Array.isArray(user.workoutSchedule) ? user.workoutSchedule : [],
       workoutReminderHour: user.workoutReminderHour ?? 6,
       workoutReminderMinute: user.workoutReminderMinute ?? 0,

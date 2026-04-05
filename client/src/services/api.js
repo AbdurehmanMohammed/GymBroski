@@ -447,6 +447,80 @@ export const progressPhotosAPI = {
     if (!res.ok) throw new Error('Failed to delete photo');
     return res.json();
   },
+  getCommunity: async ({ limit = 18, skip = 0 } = {}) => {
+    const q = new URLSearchParams({
+      limit: String(limit),
+      skip: String(skip),
+    });
+    const res = await fetch(`${API_URL}/community-photos?${q.toString()}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    if (!res.ok) throw new Error("Failed to fetch Bruski's photos");
+    return res.json();
+  },
+  createCommunityPost: async (data) => {
+    const res = await fetch(`${API_URL}/community-photos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(data),
+    });
+    const raw = await res.text();
+    let body = {};
+    try {
+      body = raw ? JSON.parse(raw) : {};
+    } catch {
+      body = {};
+    }
+    if (!res.ok) {
+      if (res.status === 413) {
+        throw new Error('Photo is too large. Try another image or one taken at lower resolution.');
+      }
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(body.message || 'Session expired. Log in again and try posting.');
+      }
+      const hint =
+        body.message ||
+        body.error ||
+        (raw && raw.length < 200 ? raw.trim() : '') ||
+        `Could not reach server (${res.status}). Is the API running?`;
+      throw new Error(hint);
+    }
+    return body;
+  },
+  toggleCommunityLike: async (postId) => {
+    const res = await fetch(`${API_URL}/community-photos/${postId}/like`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || 'Failed to like post');
+    return body;
+  },
+  addCommunityComment: async (postId, text) => {
+    const res = await fetch(`${API_URL}/community-photos/${postId}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ text }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || 'Failed to comment');
+    return body;
+  },
+  deleteCommunityPost: async (postId) => {
+    const res = await fetch(`${API_URL}/community-photos/${postId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || 'Failed to delete post');
+    return body;
+  },
 };
 
 // Challenges API

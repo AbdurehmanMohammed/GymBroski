@@ -559,7 +559,7 @@ const Admin = ({ theme = 'light', onToggleTheme }) => {
         <div className="admin-console__mark">OP</div>
         <nav className="admin-console__rail-nav">
           <RailBtn path="/dashboard" icon={FiCalendar} label="My Workouts" />
-          <RailBtn path="/community" icon={FiGlobe} label="Community" />
+          <RailBtn path="/community" icon={FiGlobe} label="Bruski's Feed" />
           <RailBtn path="/progress" icon={FiTrendingUp} label="Progress" />
           <RailBtn path="/challenges" icon={FiAward} label="Challenges" />
           <RailBtn path="/tracking" icon={FiActivity} label="Tracking" />

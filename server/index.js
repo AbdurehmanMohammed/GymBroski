@@ -15,6 +15,7 @@ import workoutRoutes from './routes/workouts.js';
 import profileRoutes from './routes/profile.js';
 import trackingRoutes from './routes/tracking.js';
 import progressPhotosRoutes from './routes/progressPhotos.js';
+import communityPhotosRoutes from './routes/communityPhotos.js';
 import challengesRoutes from './routes/challenges.js';
 import workoutSessionsRoutes from './routes/workoutSessions.js';
 import chatRoutes from './routes/chat.js';
@@ -38,8 +39,9 @@ const app = express();
 const httpServer = http.createServer(app);
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+/* Base64 workout/community images need headroom (10mb was too small for many phone photos). */
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -47,6 +49,7 @@ app.use('/api/workouts', workoutRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/progress-photos', progressPhotosRoutes);
+app.use('/api/community-photos', communityPhotosRoutes);
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/workout-sessions', workoutSessionsRoutes);
 app.use('/api/chat', chatRoutes);
@@ -105,11 +108,17 @@ mongoose
 
 // Error handling
 app.use((error, req, res, next) => {
+  if (error?.status === 413 || error?.type === 'entity.too.large' || error?.name === 'PayloadTooLargeError') {
+    return res.status(413).json({
+      success: false,
+      message: 'Photo is too large. Try a smaller image or lower camera resolution.',
+    });
+  }
   console.error('Server Error:', error);
-  res.status(500).json({ 
+  res.status(500).json({
     success: false,
-    message: 'Server Error', 
-    error: error.message 
+    message: 'Server Error',
+    error: error.message,
   });
 });
 

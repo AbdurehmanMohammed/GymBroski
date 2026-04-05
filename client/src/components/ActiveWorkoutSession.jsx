@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiCheck, FiX, FiPlay, FiAward } from 'react-icons/fi';
-import { workoutSessionsAPI, trackingAPI } from '../services/api';
+import { FiCheck, FiX, FiPlay, FiAward, FiImage } from 'react-icons/fi';
+import { workoutSessionsAPI, trackingAPI, progressPhotosAPI } from '../services/api';
 import { resolveExerciseVideoUrl, getExerciseDemoVideoUrl } from '../utils/exerciseDemoVideo';
+import {
+  resolveExerciseWeightUnit,
+  weightDisplayToStoredKg,
+  storedKgToDisplay,
+} from '../utils/weightUnits';
 import { ExerciseVideoInfoIcon, ExerciseVideoHelpModal } from './ExerciseVideoHelp';
 import Iridescence from './Iridescence';
 import DarkVeil from './DarkVeil';
@@ -19,14 +24,53 @@ const formatDuration = (seconds) => {
   return s ? `${m}min ${s}sec` : `${m}min`;
 };
 
-/** Display weight/reps from history row */
-const formatKgRepsFromHistory = (weight, reps) => {
-  const w = weight != null && weight !== '' ? Number(weight) : 0;
+/** Downscale JPEG to stay under Mongo/Express limits and speed uploads. */
+function compressImageDataUrl(dataUrl, maxEdge = 1280, quality = 0.78) {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image')) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let { width, height } = img;
+        const scale = Math.min(1, maxEdge / Math.max(width, height, 1));
+        const w = Math.round(width * scale);
+        const h = Math.round(height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/** History stores kg per set — show in the exercise’s display unit */
+const formatHistorySetLabel = (weightKg, reps, unit) => {
+  const w = weightKg != null && weightKg !== '' ? Number(weightKg) : 0;
   const r = reps != null && reps !== '' ? String(reps).trim() : '';
   if (!w && !r) return '—';
-  if (w > 0) return `${w} kg × ${r || '—'}`;
+  if (w > 0) {
+    const wDisp = unit === 'lb' ? storedKgToDisplay(String(w), 'lb') : String(w);
+    return `${wDisp} ${unit} × ${r || '—'}`;
+  }
   return r ? `${r} reps` : '—';
 };
+
+/** Horizontal peek width for swipe-to-reveal “Remove set” (both directions). */
+const SESSION_SET_DELETE_PEEK_PX = 84;
 
 const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) => {
   const [sessionStart] = useState(() => Date.now());
@@ -44,19 +88,33 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
   }, [sessionStart]);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
+  const [showSharePrompt, setShowSharePrompt] = useState(false);
+  const [summaryPhotoImage, setSummaryPhotoImage] = useState('');
+  const [summaryPhotoPosting, setSummaryPhotoPosting] = useState(false);
   const [exerciseState, setExerciseState] = useState(() =>
-    (workout.exercises || []).map((ex) => ({
-      id: ex.name + ex.muscleGroup,
-      name: ex.name,
-      muscleGroup: ex.muscleGroup,
-      sets: Array.from({ length: ex.sets || 3 }, (_, i) => ({
-        setNum: i + 1,
-        weight: '',
-        reps: '',
-        completed: false,
-        restSecondsLeft: null,
-      })),
-    }))
+    (workout.exercises || []).map((ex, exIdx) => {
+      const u = resolveExerciseWeightUnit(ex, exIdx, workout._id);
+      const rawW = ex.weight;
+      let templateWeight = '';
+      if (rawW != null && rawW !== '' && rawW !== 0 && rawW !== '0') {
+        if (/^bodyweight$/i.test(String(rawW).trim())) templateWeight = String(rawW).trim();
+        else templateWeight = storedKgToDisplay(String(rawW), u);
+      }
+      const templateReps = ex.reps != null && String(ex.reps).trim() !== '' ? String(ex.reps).trim() : '';
+      return {
+        id: ex.name + ex.muscleGroup,
+        name: ex.name,
+        muscleGroup: ex.muscleGroup,
+        weightUnit: u,
+        sets: Array.from({ length: ex.sets || 3 }, (_, i) => ({
+          setNum: i + 1,
+          weight: templateWeight,
+          reps: templateReps,
+          completed: false,
+          restSecondsLeft: null,
+        })),
+      };
+    })
   );
   const [activeRest, setActiveRest] = useState(null); // { exIdx, setIdx }
   const [userPRs, setUserPRs] = useState({}); // { exerciseNameLower: { weight, reps } }
@@ -69,6 +127,13 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
   const [showSavingLabel, setShowSavingLabel] = useState(false);
   const savingLabelTimerRef = useRef(null);
   const restIntervalRef = useRef(null);
+  const [setSwipe, setSetSwipe] = useState({ key: null, x: 0 });
+  const [setSwipeDragging, setSetSwipeDragging] = useState(false);
+  const setSwipeRef = useRef(setSwipe);
+  const setSwipeDragRef = useRef(null);
+  useEffect(() => {
+    setSwipeRef.current = setSwipe;
+  }, [setSwipe]);
 
   useEffect(() => {
     if (!validationMessage) return;
@@ -239,6 +304,39 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
     });
   };
 
+  const handleRemoveSet = (exIdx, setIdx) => {
+    setSetSwipe({ key: null, x: 0 });
+    setSwipeDragRef.current = null;
+    setSetSwipeDragging(false);
+    setExerciseState((prev) => {
+      const ex = prev[exIdx];
+      if (!ex || ex.sets.length <= 1) return prev;
+      const next = [...prev];
+      const exNext = {
+        ...next[exIdx],
+        sets: ex.sets.filter((_, i) => i !== setIdx).map((s, i) => ({ ...s, setNum: i + 1 })),
+      };
+      next[exIdx] = exNext;
+      return next;
+    });
+    queueMicrotask(() => {
+      setActiveRest((ar) => {
+        if (!ar || ar.exIdx !== exIdx) return ar;
+        if (ar.setIdx === setIdx) {
+          if (restIntervalRef.current) {
+            clearInterval(restIntervalRef.current);
+            restIntervalRef.current = null;
+          }
+          return null;
+        }
+        if (ar.setIdx > setIdx) {
+          return { exIdx, setIdx: ar.setIdx - 1 };
+        }
+        return ar;
+      });
+    });
+  };
+
   const updateSet = (exIdx, setIdx, field, value) => {
     setExerciseState((prev) => {
       const next = [...prev];
@@ -251,8 +349,21 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
 
   const buildSummary = () => {
     const durationSec = Math.floor((Date.now() - sessionStart) / 1000);
-    let totalVolume = 0;
+    let totalVolumeKg = 0;
+    let totalLbTonnage = 0;
+    let anyLb = false;
+    let anyKg = false;
     const exerciseBreakdown = exerciseState.map((ex) => {
+      const unit = ex.weightUnit === 'kg' ? 'kg' : 'lb';
+      if (unit === 'lb') anyLb = true;
+      else anyKg = true;
+
+      const parseSetWeightKg = (s) => {
+        const wStr = String(s.weight ?? '').trim();
+        if (!wStr || /^bodyweight$/i.test(wStr)) return 0;
+        return Math.max(0, parseFloat(weightDisplayToStoredKg(wStr, unit)) || 0);
+      };
+
       const completedSets = ex.sets.filter((s) => s.completed);
       let bestSet = null;
       let bestVolume = -1;
@@ -266,39 +377,51 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
         durationSec = 0; // single set = no meaningful duration
       }
       completedSets.forEach((s) => {
-        const w = Math.max(0, parseFloat(s.weight) || 0);
+        const wKg = parseSetWeightKg(s);
         const r = Math.max(0, parseInt(s.reps, 10) || 0);
-        const vol = w * r;
-        totalVolume += vol;
+        const vol = wKg * r;
+        totalVolumeKg += vol;
+        if (unit === 'lb') {
+          const wLb = Math.max(0, parseFloat(String(s.weight ?? '').trim()) || 0);
+          totalLbTonnage += wLb * r;
+        }
         if (vol >= bestVolume) {
           bestVolume = vol;
-          bestSet = { weight: w, reps: s.reps, repsNum: r };
+          bestSet = { weightKg: wKg, repsStr: (s.reps || '').toString(), repsNum: r };
         }
       });
       let bestSetLabel = '—';
       if (bestSet) {
-        if (bestSet.weight > 0) bestSetLabel = `${bestSet.weight} kg × ${bestSet.reps || '—'}`;
-        else bestSetLabel = `${bestSet.reps || '0'} reps`;
+        if (bestSet.weightKg > 0) {
+          const wDisp =
+            unit === 'lb' ? storedKgToDisplay(String(bestSet.weightKg), 'lb') : String(bestSet.weightKg);
+          bestSetLabel = `${wDisp} ${unit} × ${bestSet.repsStr || '—'}`;
+        } else bestSetLabel = `${bestSet.repsStr || '0'} reps`;
       }
       const setsLogged = completedSets.map((s) => ({
-        weight: Math.max(0, parseFloat(s.weight) || 0),
+        weight: parseSetWeightKg(s),
         reps: (s.reps || '').toString(),
       }));
       return {
         name: ex.name,
         setsCount: completedSets.length,
         bestSet: bestSetLabel,
-        bestSetWeight: bestSet?.weight ?? 0,
+        bestSetWeight: bestSet?.weightKg ?? 0,
         bestSetReps: bestSet?.repsNum ?? 0,
         durationSec,
         sets: setsLogged,
       };
     });
+    const volumeDisplayUnit = anyLb && !anyKg ? 'lb' : 'kg';
+    const volumeDisplay =
+      volumeDisplayUnit === 'lb' ? Math.round(totalLbTonnage) : Math.round(totalVolumeKg);
     return {
       workoutName: workout.name,
       dateStr: new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }),
       durationSec,
-      totalVolume: Math.round(totalVolume),
+      totalVolume: Math.round(totalVolumeKg),
+      volumeDisplay,
+      volumeDisplayUnit,
       exerciseBreakdown,
       workoutCount: 0,
     };
@@ -386,6 +509,8 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
         prs: newPRs,
         workoutCount,
       });
+      setShowSharePrompt(false);
+      setSummaryPhotoImage('');
       if (newPRs.length > 0) {
         setUserPRs((prev) => {
           const next = { ...prev };
@@ -409,10 +534,52 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
     }
   };
 
-  const handleCloseSummary = async () => {
+  const finalizeSessionClose = () => {
     // Points awarded server-side when session is saved
     onFinish?.();
     onClose();
+  };
+
+  const handleDoneSummary = () => {
+    setShowSummary(false);
+    setShowSharePrompt(true);
+  };
+
+  const handleSkipPhotoShare = () => {
+    setShowSharePrompt(false);
+    finalizeSessionClose();
+  };
+
+  const handlePostSummaryPhoto = async () => {
+    if (!summaryPhotoImage || !summaryData || summaryPhotoPosting) {
+      if (!summaryPhotoImage) alert('Please choose an image first.');
+      return;
+    }
+    setSummaryPhotoPosting(true);
+    try {
+      const image = await compressImageDataUrl(summaryPhotoImage);
+      await progressPhotosAPI.createCommunityPost({
+        image,
+        workoutName: summaryData.workoutName,
+        caption: `${summaryData.workoutName} complete`,
+        durationSec: summaryData.durationSec,
+        totalVolume: summaryData.totalVolume,
+        recordsCount: summaryData.prs?.length || 0,
+      });
+      setShowSharePrompt(false);
+      finalizeSessionClose();
+    } catch (e) {
+      alert(e?.message || 'Workout saved, but photo post failed.');
+    } finally {
+      setSummaryPhotoPosting(false);
+    }
+  };
+
+  const onSummaryPhotoPick = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const r = new FileReader();
+    r.onloadend = () => setSummaryPhotoImage(r.result);
+    r.readAsDataURL(file);
   };
 
   const dateStr = new Date().toLocaleDateString(undefined, {
@@ -421,7 +588,12 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
     year: 'numeric',
   });
 
-  if (showSummary && summaryData) {
+  const summaryModalClass =
+    theme === 'dark'
+      ? 'workout-history-detail-modal'
+      : 'workout-history-detail-modal workout-summary-modal-light';
+
+  if ((showSummary || showSharePrompt) && summaryData) {
     const nth = (n) => {
       const v = n % 100;
       if (v >= 11 && v <= 13) return `${n}th`;
@@ -434,100 +606,174 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
     };
     return (
       <>
-      <div className="modal-overlay history-detail-overlay" onClick={handleCloseSummary}>
-        <div
-          className="workout-history-detail-modal"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button type="button" className="summary-close-btn" onClick={handleCloseSummary} aria-label="Close">
-            <FiX size={24} />
-          </button>
-          <div className="summary-congrats">
-            <div className="summary-stars">★★★</div>
-            <h2 className="summary-title">Congratulations!</h2>
-            <p className="summary-count">
-              You completed your {nth(summaryData.workoutCount)} workout!
-            </p>
-          </div>
-          <div className="summary-card">
-            <h3 className="summary-card-title">{summaryData.workoutName}</h3>
-            <p className="summary-card-date">{summaryData.dateStr}</p>
-            <div className="summary-stats">
-              <span className="summary-stat summary-stat--labeled">
-                <span className="summary-stat-label">Session time</span>
-                <span className="summary-stat-row">
-                  <span className="summary-stat-icon">⏱</span>
-                  {formatDuration(summaryData.durationSec)}
-                </span>
-              </span>
-              <span className="summary-stat summary-stat--labeled">
-                <span className="summary-stat-label">Volume</span>
-                <span className="summary-stat-row">
-                  <span className="summary-stat-icon">🏋</span>
-                  {summaryData.totalVolume.toLocaleString()} kg
-                </span>
-              </span>
-              <span
-                className="summary-stat summary-stat--labeled"
-                title="Personal records earned this workout. Beat your previous best to earn PRs!"
-              >
-                <span className="summary-stat-label">PRs</span>
-                <span className="summary-stat-row">
-                  <FiAward size={18} className="summary-stat-icon" />
-                  {(summaryData.prs?.length ?? 0) > 0
-                    ? `${summaryData.prs.length} new PR${summaryData.prs.length > 1 ? 's' : ''}!`
-                    : 'No PRs this workout'}
-                </span>
-              </span>
-            </div>
-            {(summaryData.prs?.length ?? 0) === 0 && (
-              <p className="summary-pr-hint">Beat your previous best weight/reps to earn PRs.</p>
-            )}
-            <div className="summary-exercises">
-              <div className="summary-ex-row header">
-                <span>Exercise</span>
-                <span>Best Set</span>
-                <span>Duration</span>
-              </div>
-              {summaryData.exerciseBreakdown
-                .filter((row) => row.setsCount > 0)
-                .map((row, i) => {
-                  const isPR = (summaryData.prs || []).some((p) =>
-                    p.exerciseName?.toLowerCase() === row.name?.toLowerCase()
-                  );
-                  return (
-                    <div key={i} className="summary-ex-row">
-                      <span className="summary-exercise-cell">
-                        <span className="summary-exercise-text">
-                          {row.setsCount} × {row.name}
-                          {isPR && <span className="summary-pr-badge" title="Personal Record"> 🏆</span>}
-                        </span>
-                        <ExerciseVideoInfoIcon
-                          size={14}
-                          onClick={() =>
-                            setExerciseVideoHelp({
-                              name: row.name,
-                              url: getExerciseDemoVideoUrl(row.name),
-                            })
-                          }
-                        />
-                      </span>
-                      <span>{row.bestSet}</span>
-                      <span className="summary-ex-duration">
-                        {row.durationSec > 0 ? formatDuration(row.durationSec) : '—'}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-          <div className="workout-history-modal-actions">
-            <button type="button" className="summary-done-btn" onClick={handleCloseSummary}>
-              Done
+      {showSummary && (
+        <div className="modal-overlay history-detail-overlay" onClick={handleDoneSummary}>
+          <div className={summaryModalClass} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="summary-close-btn" onClick={handleDoneSummary} aria-label="Close">
+              <FiX size={24} />
             </button>
+            <div className="summary-congrats">
+              <div className="summary-stars">★★★</div>
+              <h2 className="summary-title">Congratulations!</h2>
+              <p className="summary-count">
+                You completed your {nth(summaryData.workoutCount)} workout!
+              </p>
+            </div>
+            <div className="summary-card">
+              <h3 className="summary-card-title">{summaryData.workoutName}</h3>
+              <p className="summary-card-date">{summaryData.dateStr}</p>
+              <div className="summary-stats">
+                <span className="summary-stat summary-stat--labeled">
+                  <span className="summary-stat-label">Session time</span>
+                  <span className="summary-stat-row">
+                    <span className="summary-stat-icon">⏱</span>
+                    {formatDuration(summaryData.durationSec)}
+                  </span>
+                </span>
+                <span className="summary-stat summary-stat--labeled">
+                  <span className="summary-stat-label">Volume</span>
+                  <span className="summary-stat-row">
+                    <span className="summary-stat-icon">🏋</span>
+                    {(summaryData.volumeDisplay ?? summaryData.totalVolume).toLocaleString()}{' '}
+                    {summaryData.volumeDisplayUnit ?? 'kg'}
+                  </span>
+                </span>
+                <span
+                  className="summary-stat summary-stat--labeled"
+                  title="Personal records earned this workout. Beat your previous best to earn PRs!"
+                >
+                  <span className="summary-stat-label">PRs</span>
+                  <span className="summary-stat-row">
+                    <FiAward size={18} className="summary-stat-icon" />
+                    {(summaryData.prs?.length ?? 0) > 0
+                      ? `${summaryData.prs.length} new PR${summaryData.prs.length > 1 ? 's' : ''}!`
+                      : 'No PRs this workout'}
+                  </span>
+                </span>
+              </div>
+              {(summaryData.prs?.length ?? 0) === 0 && (
+                <p className="summary-pr-hint">Beat your previous best weight/reps to earn PRs.</p>
+              )}
+              <div className="summary-exercises">
+                <div className="summary-ex-row header">
+                  <span>Exercise</span>
+                  <span>Best Set</span>
+                  <span>Duration</span>
+                </div>
+                {summaryData.exerciseBreakdown
+                  .filter((row) => row.setsCount > 0)
+                  .map((row, i) => {
+                    const isPR = (summaryData.prs || []).some((p) =>
+                      p.exerciseName?.toLowerCase() === row.name?.toLowerCase()
+                    );
+                    return (
+                      <div key={i} className="summary-ex-row">
+                        <span className="summary-exercise-cell">
+                          <span className="summary-exercise-text">
+                            {row.setsCount} × {row.name}
+                            {isPR && <span className="summary-pr-badge" title="Personal Record"> 🏆</span>}
+                          </span>
+                          <ExerciseVideoInfoIcon
+                            size={14}
+                            onClick={() =>
+                              setExerciseVideoHelp({
+                                name: row.name,
+                                url: getExerciseDemoVideoUrl(row.name),
+                              })
+                            }
+                          />
+                        </span>
+                        <span>{row.bestSet}</span>
+                        <span className="summary-ex-duration">
+                          {row.durationSec > 0 ? formatDuration(row.durationSec) : '—'}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+            <div className="workout-history-modal-actions">
+              <button type="button" className="summary-done-btn" onClick={handleDoneSummary}>
+                Done
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      {showSharePrompt && (
+        <div className="modal-overlay history-detail-overlay" onClick={handleSkipPhotoShare}>
+          <div className={`${summaryModalClass} summary-share-modal`} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="summary-close-btn" onClick={handleSkipPhotoShare} aria-label="Close">
+              <FiX size={24} />
+            </button>
+            <div className="summary-congrats summary-congrats--share-prompt">
+              <h2 className="summary-title">Share photo to Bruski&apos;s photos?</h2>
+              <p className="summary-count">Your session time, volume, and PRs are added automatically.</p>
+            </div>
+            <div className="summary-card">
+              <h3 className="summary-card-title">{summaryData.workoutName}</h3>
+              <p className="summary-card-date">{summaryData.dateStr}</p>
+              <div className="summary-stats">
+                <span className="summary-stat summary-stat--labeled">
+                  <span className="summary-stat-label">Session time</span>
+                  <span className="summary-stat-row">
+                    <span className="summary-stat-icon">⏱</span>
+                    {formatDuration(summaryData.durationSec)}
+                  </span>
+                </span>
+                <span className="summary-stat summary-stat--labeled">
+                  <span className="summary-stat-label">Volume</span>
+                  <span className="summary-stat-row">
+                    <span className="summary-stat-icon">🏋</span>
+                    {(summaryData.volumeDisplay ?? summaryData.totalVolume).toLocaleString()}{' '}
+                    {summaryData.volumeDisplayUnit ?? 'kg'}
+                  </span>
+                </span>
+                <span className="summary-stat summary-stat--labeled">
+                  <span className="summary-stat-label">PRs</span>
+                  <span className="summary-stat-row">
+                    <FiAward size={18} className="summary-stat-icon" />
+                    {summaryData.prs?.length || 0}
+                  </span>
+                </span>
+              </div>
+              <div className="summary-photo-share">
+                <p className="summary-photo-share-title">Add image</p>
+                {!summaryPhotoImage ? (
+                  <label className="summary-photo-picker">
+                    <FiImage size={16} /> Choose photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => onSummaryPhotoPick(e.target.files?.[0])}
+                    />
+                  </label>
+                ) : (
+                  <div className="summary-photo-preview-wrap">
+                    <img src={summaryPhotoImage} alt="Workout summary" className="summary-photo-preview" />
+                    <button
+                      type="button"
+                      className="summary-photo-change-btn"
+                      onClick={() => setSummaryPhotoImage('')}
+                    >
+                      Change image
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="workout-history-modal-actions">
+              <button type="button" className="workout-history-delete-btn summary-share-skip-btn" onClick={handleSkipPhotoShare} disabled={summaryPhotoPosting}>
+                Skip
+              </button>
+              <button type="button" className="summary-done-btn" onClick={handlePostSummaryPhoto} disabled={summaryPhotoPosting || !summaryPhotoImage}>
+                {summaryPhotoPosting ? 'Posting...' : "Post to Bruski's photos"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ExerciseVideoHelpModal
         open={!!exerciseVideoHelp}
         exerciseName={exerciseVideoHelp?.name}
@@ -646,7 +892,10 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
                 </div>
                 {pr && (
                   <span className="session-exercise-pr">
-                    <FiAward size={14} /> Your PR: {pr.weight > 0 ? `${pr.weight} kg × ${pr.reps}` : `${pr.reps} reps`}
+                    <FiAward size={14} /> Your PR:{' '}
+                    {pr.weight > 0
+                      ? `${storedKgToDisplay(String(pr.weight), ex.weightUnit === 'kg' ? 'kg' : 'lb')} ${ex.weightUnit === 'kg' ? 'kg' : 'lb'} × ${pr.reps}`
+                      : `${pr.reps} reps`}
                   </span>
                 )}
               </div>
@@ -654,7 +903,7 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
                 <div className="session-sets-header">
                   <span>Set</span>
                   <span title="What you logged last time you finished this workout">Last session</span>
-                  <span>kg</span>
+                  <span>{ex.weightUnit === 'kg' ? 'kg' : 'lb'}</span>
                   <span>Reps</span>
                   <span></span>
                 </div>
@@ -664,60 +913,170 @@ const ActiveWorkoutSession = ({ workout, onClose, onFinish, theme = 'light' }) =
                   let lastSessionCell = '—';
                   if (hist?.sets?.length > setIdx) {
                     const row = hist.sets[setIdx];
-                    lastSessionCell = formatKgRepsFromHistory(row?.weight, row?.reps);
+                    lastSessionCell = formatHistorySetLabel(row?.weight, row?.reps, ex.weightUnit);
                   } else if (setIdx === 0 && hist?.bestSet) {
                     lastSessionCell = hist.bestSet;
                   }
+                  const rowKey = `${exIdx}-${setIdx}`;
+                  const canSwipeDelete = ex.sets.length > 1;
+                  const swipeX = setSwipe.key === rowKey ? setSwipe.x : 0;
+                  const finishSwipeGesture = (currentTarget, pointerId) => {
+                    setSwipeDragRef.current = null;
+                    try {
+                      currentTarget.releasePointerCapture(pointerId);
+                    } catch (_) {}
+                    setSetSwipeDragging(false);
+                    setSetSwipe((prev) => {
+                      if (prev.key !== rowKey) return prev;
+                      let x = prev.x;
+                      const t = SESSION_SET_DELETE_PEEK_PX;
+                      if (x < -t / 2) x = -t;
+                      else if (x > t / 2) x = t;
+                      else x = 0;
+                      return { key: rowKey, x };
+                    });
+                  };
                   return (
-                  <React.Fragment key={setIdx}>
-                    <div className="session-set-row">
-                      <span className="set-num">{s.setNum}</span>
-                      <span
-                        className="set-prev"
-                        title="From your last saved workout with this routine (per set when available)"
-                      >
-                        {lastSessionCell}
-                      </span>
-                      <input
-                        type="number"
-                        className="set-input"
-                        min={0}
-                        step="0.5"
-                        value={s.weight}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === '' || v === '-') {
-                            updateSet(exIdx, setIdx, 'weight', v);
-                            return;
+                  <React.Fragment key={`${ex.id}-${s.setNum}`}>
+                    <div
+                      className={`session-set-row-swipe${setIdx === ex.sets.length - 1 ? ' session-set-row-swipe--last' : ''}`}
+                    >
+                      {canSwipeDelete && (
+                        <>
+                          <button
+                            type="button"
+                            className="session-set-row-delete session-set-row-delete--left"
+                            tabIndex={swipeX > 0 ? 0 : -1}
+                            aria-hidden={swipeX <= 0}
+                            onClick={() => {
+                              handleRemoveSet(exIdx, setIdx);
+                            }}
+                          >
+                            Remove
+                          </button>
+                          <button
+                            type="button"
+                            className="session-set-row-delete session-set-row-delete--right"
+                            tabIndex={swipeX < 0 ? 0 : -1}
+                            aria-hidden={swipeX >= 0}
+                            onClick={() => {
+                              handleRemoveSet(exIdx, setIdx);
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </>
+                      )}
+                      <div
+                        role="group"
+                        aria-label={
+                          canSwipeDelete
+                            ? 'Set row — swipe left or right to remove this set'
+                            : 'Set row'
+                        }
+                        className={`session-set-row-track${setSwipeDragging && setSwipe.key === rowKey ? ' is-swiping' : ''}`}
+                        style={{ transform: `translateX(${swipeX}px)` }}
+                        onPointerDown={(e) => {
+                          if (!canSwipeDelete) return;
+                          if (e.pointerType === 'mouse' && e.button !== 0) return;
+                          if (e.target.closest?.('input, button, textarea, select, a')) return;
+                          const prev = setSwipeRef.current;
+                          const sameRow = prev.key === rowKey;
+                          const startOff = sameRow ? prev.x : 0;
+                          if (!sameRow) setSetSwipe({ key: rowKey, x: 0 });
+                          setSwipeDragRef.current = {
+                            pointerId: e.pointerId,
+                            rowKey,
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            startOff,
+                            axisLocked: null,
+                          };
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                        }}
+                        onPointerMove={(e) => {
+                          const d = setSwipeDragRef.current;
+                          if (!d || d.pointerId !== e.pointerId || d.rowKey !== rowKey) return;
+                          const dx = e.clientX - d.startX;
+                          const dy = e.clientY - d.startY;
+                          if (!d.axisLocked) {
+                            if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+                            if (Math.abs(dy) >= Math.abs(dx)) {
+                              setSwipeDragRef.current = null;
+                              try {
+                                e.currentTarget.releasePointerCapture(e.pointerId);
+                              } catch (_) {}
+                              return;
+                            }
+                            d.axisLocked = 'h';
+                            setSetSwipeDragging(true);
                           }
-                          const n = parseFloat(v);
-                          if (!Number.isNaN(n) && n < 0) return;
-                          updateSet(exIdx, setIdx, 'weight', v);
+                          e.preventDefault();
+                          let x = d.startOff + dx;
+                          x = Math.max(-SESSION_SET_DELETE_PEEK_PX, Math.min(SESSION_SET_DELETE_PEEK_PX, x));
+                          setSetSwipe({ key: rowKey, x });
                         }}
-                        placeholder="0"
-                      />
-                      <input
-                        type="text"
-                        className="set-input"
-                        value={s.reps}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          const n = parseInt(v, 10);
-                          if (v !== '' && !Number.isNaN(n) && n < 0) return;
-                          updateSet(exIdx, setIdx, 'reps', v);
+                        onPointerUp={(e) => {
+                          const d = setSwipeDragRef.current;
+                          if (!d || d.pointerId !== e.pointerId) return;
+                          finishSwipeGesture(e.currentTarget, e.pointerId);
                         }}
-                        title="Typical rep range hint — enter what you actually did this set"
-                        placeholder="10-12"
-                      />
-                      <button
-                        type="button"
-                        className={`set-complete-btn ${s.completed ? 'done' : ''}`}
-                        onClick={() => handleToggleSet(exIdx, setIdx)}
-                        title={s.completed ? 'Undo — tap to uncheck' : 'Mark done'}
-                        aria-pressed={s.completed}
+                        onPointerCancel={(e) => {
+                          const d = setSwipeDragRef.current;
+                          if (!d || d.pointerId !== e.pointerId) return;
+                          finishSwipeGesture(e.currentTarget, e.pointerId);
+                        }}
                       >
-                        <FiCheck size={18} />
-                      </button>
+                        <div className="session-set-row">
+                          <span className="set-num">{s.setNum}</span>
+                          <span
+                            className="set-prev"
+                            title="From your last saved workout with this routine (per set when available)"
+                          >
+                            {lastSessionCell}
+                          </span>
+                          <input
+                            type="number"
+                            className="set-input"
+                            min={0}
+                            step="0.5"
+                            value={s.weight}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === '' || v === '-') {
+                                updateSet(exIdx, setIdx, 'weight', v);
+                                return;
+                              }
+                              const n = parseFloat(v);
+                              if (!Number.isNaN(n) && n < 0) return;
+                              updateSet(exIdx, setIdx, 'weight', v);
+                            }}
+                            placeholder="0"
+                          />
+                          <input
+                            type="text"
+                            className="set-input"
+                            value={s.reps}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              const n = parseInt(v, 10);
+                              if (v !== '' && !Number.isNaN(n) && n < 0) return;
+                              updateSet(exIdx, setIdx, 'reps', v);
+                            }}
+                            title="Typical rep range hint — enter what you actually did this set"
+                            placeholder="10-12"
+                          />
+                          <button
+                            type="button"
+                            className={`set-complete-btn ${s.completed ? 'done' : ''}`}
+                            onClick={() => handleToggleSet(exIdx, setIdx)}
+                            title={s.completed ? 'Undo — tap to uncheck' : 'Mark done'}
+                            aria-pressed={s.completed}
+                          >
+                            <FiCheck size={18} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     {/* Rest timer bar between sets */}
                     <div

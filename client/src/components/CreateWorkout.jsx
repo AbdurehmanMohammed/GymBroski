@@ -14,6 +14,8 @@ import { getExerciseDemoVideoUrl } from '../utils/exerciseDemoVideo';
 import {
   convertWeightBetweenUnits,
   weightDisplayToStoredKg,
+  exerciseWeightUnit,
+  persistWorkoutExerciseUnits,
 } from '../utils/weightUnits';
 import { parseReminderTimeInput } from '../utils/reminderTime';
 
@@ -139,7 +141,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         sets: e.sets,
         reps: normalizeDefaultReps(e.reps),
         weight: (e.weight && e.weight !== '0') ? e.weight : '',
-        weightUnit: 'lb',
+        weightUnit: exerciseWeightUnit(e),
         muscleGroup: e.muscleGroup || 'Other',
       })),
     });
@@ -277,7 +279,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
   const createPayload = () => ({
     ...formData,
     exercises: formData.exercises.map((ex) => {
-      const unit = ex.weightUnit || 'lb';
+      const unit = exerciseWeightUnit(ex);
       const raw = ex.weight;
       let weightStr;
       if (raw == null || String(raw).trim() === '') {
@@ -294,6 +296,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         sets: Number(ex.sets) || 3,
         reps: String(ex.reps ?? 10),
         weight: weightStr,
+        weightUnit: unit,
         muscleGroup: ex.muscleGroup || 'Other',
         videoUrl: getExerciseDemoVideoUrl(ex.name),
       };
@@ -310,9 +313,11 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
     setLoading(true);
     setError('');
     try {
-      const created = await workoutAPI.create(createPayload());
+      const payload = createPayload();
+      const created = await workoutAPI.create(payload);
       const wid = created._id || created.id;
       if (!wid) throw new Error('Server did not return a workout id');
+      persistWorkoutExerciseUnits(wid, payload.exercises);
 
       if (trainingDays.length > 0) {
         try {
@@ -345,7 +350,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
         }
       }
 
-      onSuccess();
+      onSuccess(created);
       onClose();
     } catch (err) {
       setError(err?.message || 'Failed to create workout');
@@ -376,7 +381,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
             <h2>{phaseTitle}</h2>
             {phase === 'visibility' && (
               <p className="create-workout-subtitle">
-                Share with the community or keep it private — then you&apos;ll pick training days.
+                Share on Bruski&apos;s Feed or keep it private — then you&apos;ll pick training days.
               </p>
             )}
             {phase === 'schedule' && (
@@ -726,7 +731,7 @@ const CreateWorkout = ({ onClose, onSuccess }) => {
                 </span>
                 <span className="visibility-option-label">Public</span>
                 <span className="visibility-option-desc">
-                  Show on the community feed — others can view and copy your split
+                  Show on Bruski&apos;s Feed — others can view and copy your split
                 </span>
               </button>
               <button

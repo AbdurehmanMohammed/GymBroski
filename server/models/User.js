@@ -75,6 +75,8 @@ const userSchema = new mongoose.Schema({
   },
   /** Email when someone sends a private/group chat message */
   emailChatNotifications: { type: Boolean, default: true },
+  /** Email when someone posts a new community photo */
+  emailCommunityPhotoNotifications: { type: Boolean, default: true },
   lastChatEmailNotificationAt: { type: Date, default: null }
 }, {
   timestamps: true
