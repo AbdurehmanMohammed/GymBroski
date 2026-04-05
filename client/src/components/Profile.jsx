@@ -1117,115 +1117,115 @@ const Profile = ({ theme = 'light', onToggleTheme }) => {
                 </button>
               </div>
 
-              <div className="progress-photo-form">
-                <div className="progress-photo-form__field">
-                  <span className="form-label" id="photo-upload-label">
-                    Photo
-                  </span>
-                  <input
-                    ref={fileInputRef}
-                    id="progress-photo-file"
-                    className="progress-photo-file-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      loadImageFile(e.target.files?.[0]);
-                      e.target.value = '';
-                    }}
-                    aria-labelledby="photo-upload-label"
-                  />
-                  {!addForm.image ? (
-                    <label
-                      htmlFor="progress-photo-file"
-                      className={`progress-photo-dropzone ${uploadDragActive ? 'progress-photo-dropzone--active' : ''}`}
-                      onDragEnter={(e) => {
-                        e.preventDefault();
-                        setUploadDragActive(true);
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        if (e.currentTarget === e.target) setUploadDragActive(false);
-                      }}
-                      onDragOver={onUploadDragOver}
-                      onDrop={onUploadDrop}
-                    >
-                      <span className="progress-photo-dropzone__icon" aria-hidden>
-                        <FiUploadCloud size={36} />
-                      </span>
-                      <span className="progress-photo-dropzone__title">Drop image here or click to browse</span>
-                      <span className="progress-photo-dropzone__hint">JPG, PNG, WebP — best under 5MB</span>
-                    </label>
-                  ) : (
-                    <div className="progress-photo-preview-wrap">
-                      <img className="progress-photo-preview" src={addForm.image} alt="Selected preview" />
-                      <div className="progress-photo-preview-actions">
-                        <button
-                          type="button"
-                          className="progress-photo-change-btn"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          Choose different image
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="progress-photo-form__field">
-                  <span className="form-label" id="label-pills-label">
-                    Type
-                  </span>
-                  <div
-                    className="progress-photo-pills"
-                    role="radiogroup"
-                    aria-labelledby="label-pills-label"
-                  >
-                    {['before', 'after', 'progress'].map((val) => (
-                      <button
-                        key={val}
-                        type="button"
-                        role="radio"
-                        aria-checked={addForm.label === val}
-                        className={`progress-photo-pill progress-photo-pill--${val} ${
-                          addForm.label === val ? 'progress-photo-pill--selected' : ''
-                        }`}
-                        onClick={() => setAddForm((prev) => ({ ...prev, label: val }))}
-                      >
-                        {formatPhotoLabel(val)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="progress-photo-form__field">
-                  <label className="form-label" htmlFor="progress-photo-date">
-                    Date taken
-                  </label>
-                  <div className="progress-photo-date-wrap">
-                    <FiCalendar className="progress-photo-date-icon" size={18} aria-hidden />
+              <div className="progress-photo-modal__body">
+                <div className="progress-photo-form">
+                  <div className="progress-photo-form__field">
+                    <span className="form-label" id="photo-upload-label">
+                      Photo
+                    </span>
                     <input
-                      id="progress-photo-date"
-                      type="date"
-                      value={addForm.date}
-                      onChange={(e) => setAddForm((prev) => ({ ...prev, date: e.target.value }))}
+                      ref={fileInputRef}
+                      id="progress-photo-file"
+                      className="progress-photo-file-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        loadImageFile(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                      aria-labelledby="photo-upload-label"
+                    />
+                    {!addForm.image ? (
+                      <label
+                        htmlFor="progress-photo-file"
+                        className={`progress-photo-dropzone ${uploadDragActive ? 'progress-photo-dropzone--active' : ''}`}
+                        onDragEnter={(e) => {
+                          e.preventDefault();
+                          setUploadDragActive(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          if (e.currentTarget === e.target) setUploadDragActive(false);
+                        }}
+                        onDragOver={onUploadDragOver}
+                        onDrop={onUploadDrop}
+                      >
+                        <span className="progress-photo-dropzone__icon" aria-hidden>
+                          <FiUploadCloud size={36} />
+                        </span>
+                        <span className="progress-photo-dropzone__title">Drop image here or click to browse</span>
+                        <span className="progress-photo-dropzone__hint">JPG, PNG, WebP — best under 5MB</span>
+                      </label>
+                    ) : (
+                      <div className="progress-photo-preview-wrap">
+                        <img className="progress-photo-preview" src={addForm.image} alt="Selected preview" />
+                        <div className="progress-photo-preview-actions">
+                          <label htmlFor="progress-photo-file" className="progress-photo-change-btn">
+                            Choose different image
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="progress-photo-form__field">
+                    <span className="form-label" id="label-pills-label">
+                      Type
+                    </span>
+                    <div
+                      className="progress-photo-pills"
+                      role="radiogroup"
+                      aria-labelledby="label-pills-label"
+                    >
+                      {['before', 'after', 'progress'].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          role="radio"
+                          aria-checked={addForm.label === val}
+                          className={`progress-photo-pill progress-photo-pill--${val} ${
+                            addForm.label === val ? 'progress-photo-pill--selected' : ''
+                          }`}
+                          onClick={() => setAddForm((prev) => ({ ...prev, label: val }))}
+                        >
+                          {formatPhotoLabel(val)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="progress-photo-form__field">
+                    <label className="form-label" htmlFor="progress-photo-date">
+                      Date taken
+                    </label>
+                    <div className="progress-photo-date-wrap">
+                      <FiCalendar className="progress-photo-date-icon" size={18} aria-hidden />
+                      <input
+                        id="progress-photo-date"
+                        type="date"
+                        value={addForm.date}
+                        onChange={(e) => setAddForm((prev) => ({ ...prev, date: e.target.value }))}
+                      />
+                    </div>
+                    <p className="progress-photo-help">Defaults to today if you don’t change it.</p>
+                  </div>
+
+                  <div className="progress-photo-form__field">
+                    <label className="form-label" htmlFor="progress-photo-notes">
+                      Notes <span className="progress-photo-optional">(optional)</span>
+                    </label>
+                    <textarea
+                      id="progress-photo-notes"
+                      placeholder="e.g. Week 4 cut, morning fasted"
+                      rows={3}
+                      value={addForm.notes}
+                      onChange={(e) => setAddForm((prev) => ({ ...prev, notes: e.target.value }))}
                     />
                   </div>
-                  <p className="progress-photo-help">Defaults to today if you don’t change it.</p>
                 </div>
+              </div>
 
-                <div className="progress-photo-form__field">
-                  <label className="form-label" htmlFor="progress-photo-notes">
-                    Notes <span className="progress-photo-optional">(optional)</span>
-                  </label>
-                  <textarea
-                    id="progress-photo-notes"
-                    placeholder="e.g. Week 4 cut, morning fasted"
-                    rows={3}
-                    value={addForm.notes}
-                    onChange={(e) => setAddForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  />
-                </div>
-
+              <div className="progress-photo-modal__footer">
                 <div className="progress-photo-form-actions">
                   <button
                     type="button"

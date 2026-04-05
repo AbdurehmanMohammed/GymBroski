@@ -7856,9 +7856,13 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   gap: 12px;
   justify-content: flex-end;
   flex-wrap: wrap;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-soft);
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: none;
+}
+
+.progress-photo-modal__footer .progress-photo-form-actions {
+  padding-top: 0;
 }
 
 .progress-photo-form-btn {
@@ -7898,9 +7902,37 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
 
 .modal-content.progress-photo-modal {
   max-width: 440px;
+  width: 100%;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--text-main) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 900px);
+  min-height: 0;
+}
+
+.progress-photo-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.progress-photo-modal__footer {
+  flex-shrink: 0;
+  padding: 0 24px max(20px, env(safe-area-inset-bottom, 0px)) 24px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-soft);
+}
+
+html:not(.dark-theme) .progress-photo-modal__footer {
+  background: #ffffff;
+}
+
+.dark-theme .progress-photo-modal__footer {
+  background: var(--bg-card);
 }
 
 .modal-content.progress-photo-modal::before {
@@ -7911,6 +7943,7 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
 }
 
 .progress-photo-modal__header.modal-header {
+  flex-shrink: 0;
   align-items: flex-start;
   padding: 22px 22px 18px;
   gap: 12px;
@@ -7940,8 +7973,8 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   font-weight: 500;
 }
 
-.progress-photo-form {
-  padding: 24px 24px 26px;
+.progress-photo-modal .progress-photo-form {
+  padding: 24px 24px 20px;
 }
 
 .progress-photo-form__field {
@@ -8097,6 +8130,8 @@ html:not(.dark-theme) .modal-content.create-workout-modal {
   background: none;
   border: none;
   cursor: pointer;
+  display: inline-block;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   color: #6366f1;
